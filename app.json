@@ -17,16 +17,29 @@
     },
     "android": {
       "package": "com.gatepass.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0F2D6B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CALL_PHONE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d5571491-4f86-44d7-95ce-f602f42f2885"
+      }
+    },
+    "owner": "vishwabhai"
   }
 }
