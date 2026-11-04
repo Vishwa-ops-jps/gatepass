@@ -1,3 +1,5 @@
+// High quality community data modeling MyGate, NoBrokerHood & ADDA
+
 export const initialPendingRequests = [
   {
     id: 'req-1',
@@ -9,8 +11,11 @@ export const initialPendingRequests = [
     gate: 'Main Gate 1',
     time: 'Just now',
     purpose: 'Visiting Flat B-402',
-    image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+    flat: 'B-402',
+    image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     status: 'pending',
+    temperature: '98.4°F',
+    mask: 'Verified',
   },
   {
     id: 'req-2',
@@ -21,9 +26,11 @@ export const initialPendingRequests = [
     vendor: 'Zomato',
     gate: 'Service Gate 2',
     time: '2 mins ago',
-    purpose: 'Food Delivery - Prepaid',
-    image: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
+    purpose: 'Food Delivery • Order #84920',
+    flat: 'B-402',
+    image: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
     status: 'pending',
+    vendorColor: '#E23744',
   },
 ];
 
@@ -37,12 +44,14 @@ export const initialRecentActivity = [
     gate: 'Main Gate 1',
     action: 'Checked In',
     status: 'approved',
+    phone: '+91 98220 11223',
   },
   {
     id: 'act-2',
-    name: 'Uber (Swift Dzire - KA-01-AB-1234)',
+    name: 'Uber (Swift Dzire)',
     role: 'Cab / Taxi',
     category: 'cab',
+    vehicle: 'KA-01-AB-1234',
     time: 'Today, 09:15 AM',
     gate: 'Main Gate 1',
     action: 'Allowed Entry',
@@ -50,13 +59,15 @@ export const initialRecentActivity = [
   },
   {
     id: 'act-3',
-    name: 'Amazon Courier Partner',
+    name: 'Amazon Courier (Rajesh)',
     role: 'Delivery',
     category: 'delivery',
+    vendor: 'Amazon',
     time: 'Yesterday, 04:45 PM',
     gate: 'Gate 2 (Parcel Desk)',
-    action: 'Left at Security',
+    action: 'Left at Security Desk',
     status: 'completed',
+    vendorColor: '#FF9900',
   },
   {
     id: 'act-4',
@@ -79,7 +90,9 @@ export const dailyStaffList = [
     phone: '+91 98220 11223',
     status: 'Inside Society',
     entryTime: '08:30 AM',
-    flatsWorked: '6 Flats',
+    flatsWorked: '6 Flats (Block B & C)',
+    badge: 'Police Verified',
+    image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
   },
   {
     id: 'staff-2',
@@ -89,7 +102,9 @@ export const dailyStaffList = [
     phone: '+91 97334 22119',
     status: 'Inside Society',
     entryTime: '06:45 AM',
-    flatsWorked: '4 Flats',
+    flatsWorked: '4 Flats (Block B)',
+    badge: 'Police Verified',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
   },
   {
     id: 'staff-3',
@@ -99,7 +114,21 @@ export const dailyStaffList = [
     phone: '+91 94112 88440',
     status: 'Expected at 06:00 PM',
     entryTime: '-',
-    flatsWorked: '3 Flats',
+    flatsWorked: '3 Flats (Block B)',
+    badge: 'Police Verified',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'staff-4',
+    name: 'Mohammad Farooq',
+    role: 'Society Electrician',
+    rating: '4.9 ★',
+    phone: '+91 98450 33441',
+    status: 'On Duty • Estate Office',
+    entryTime: '08:00 AM',
+    flatsWorked: 'Emerald Heights Facility Team',
+    badge: 'Official Staff',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
   },
 ];
 
@@ -112,6 +141,8 @@ export const amenitiesList = [
     status: 'Available',
     price: '₹2,500 / slot',
     icon: 'home',
+    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=300&auto=format&fit=crop&q=80',
+    description: 'Central air-conditioned banquet hall with stage, dining area & sound system.',
   },
   {
     id: 'am-2',
@@ -121,6 +152,8 @@ export const amenitiesList = [
     status: 'Open Today',
     price: 'Free for Residents',
     icon: 'water',
+    image: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=300&auto=format&fit=crop&q=80',
+    description: 'Clean temperature-controlled 25m pool with dedicated lifeguard.',
   },
   {
     id: 'am-3',
@@ -130,6 +163,8 @@ export const amenitiesList = [
     status: 'Slots Open',
     price: '₹150 / hr',
     icon: 'tennisball',
+    image: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=300&auto=format&fit=crop&q=80',
+    description: 'Synthetic hard court with night LED floodlights.',
   },
   {
     id: 'am-4',
@@ -139,6 +174,64 @@ export const amenitiesList = [
     status: 'Open Today',
     price: 'Free for Residents',
     icon: 'barbell',
+    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&auto=format&fit=crop&q=80',
+    description: 'State-of-the-art gym with treadmills, free weights & personal trainer.',
+  },
+];
+
+export const initialHelpdeskTickets = [
+  {
+    id: 'TICK-101',
+    category: 'Electrical',
+    title: 'Corridor Light Flickering outside Flat B-402',
+    description: 'The ceiling LED panel right outside the main door is flickering continuously.',
+    status: 'In Progress',
+    assignedTo: 'Mohammad Farooq (Electrician)',
+    priority: 'Medium',
+    createdDate: 'Today, 10:15 AM',
+    eta: 'Today by 04:00 PM',
+  },
+  {
+    id: 'TICK-102',
+    category: 'Plumbing',
+    title: 'Water Pressure Issue in Kitchen Sink',
+    description: 'Low water pressure on the hot water line since yesterday evening.',
+    status: 'Resolved',
+    assignedTo: 'Kishore (Plumber)',
+    priority: 'Low',
+    createdDate: 'Yesterday, 02:30 PM',
+    resolvedDate: 'Yesterday, 05:45 PM',
+  },
+];
+
+export const registeredVehicles = [
+  {
+    plate: 'KA-05-MM-9214',
+    type: 'Car (Honda City)',
+    ownerFlat: 'B-402',
+    slot: 'B-2 Basemant #42',
+    rfidTag: 'GP-FAST-7721 (Active)',
+  },
+  {
+    plate: 'KA-01-EE-3312',
+    type: 'Two Wheeler (Ather 450X)',
+    ownerFlat: 'B-402',
+    slot: 'Two Wheeler Bay #18',
+    rfidTag: 'GP-FAST-9021 (Active)',
+  },
+  {
+    plate: 'KA-03-MG-4120',
+    type: 'Car (Hyundai Creta)',
+    ownerFlat: 'A-104',
+    slot: 'A-1 Basement #12',
+    rfidTag: 'GP-FAST-1244 (Active)',
+  },
+  {
+    plate: 'KA-51-AB-8800',
+    type: 'Car (Kia Seltos)',
+    ownerFlat: 'C-302',
+    slot: 'C-2 Basement #08',
+    rfidTag: 'GP-FAST-6611 (Active)',
   },
 ];
 
@@ -148,27 +241,52 @@ export const communityNotices = [
     title: 'Elevator Maintenance in Block B',
     date: 'Nov 05, 2026',
     tag: 'Notice',
+    category: 'Maintenance',
     desc: 'Scheduled service between 11:00 AM to 02:00 PM. Please use Lift #2 during this period.',
+    author: 'Estate Manager',
   },
   {
     id: 'not-2',
     title: 'Diwali Celebration & Cultural Night',
     date: 'Nov 08, 2026',
     tag: 'Event',
-    desc: 'Gather at the Central Lawn at 06:30 PM. Music, dinner & performances.',
+    category: 'Community',
+    desc: 'Gather at the Central Lawn at 06:30 PM. Music, buffet dinner & kids fireworks display.',
+    author: 'Cultural Committee',
+  },
+  {
+    id: 'not-3',
+    title: 'Annual General Meeting (AGM) 2026',
+    date: 'Nov 15, 2026',
+    tag: 'Important',
+    category: 'Official',
+    desc: 'All owners are requested to attend the AGM at Clubhouse Hall at 10:00 AM sharp.',
+    author: 'Management Committee',
   },
 ];
+
+export const communityPoll = {
+  id: 'poll-1',
+  question: 'Should the society install EV Fast Chargers in Basement 2?',
+  totalVotes: 142,
+  options: [
+    { id: 'opt-1', label: 'Yes, urgently needed', votes: 98, percent: 69 },
+    { id: 'opt-2', label: 'Yes, but normal 15A plugs', votes: 32, percent: 23 },
+    { id: 'opt-3', label: 'Not required now', votes: 12, percent: 8 },
+  ],
+  hasVoted: false,
+};
 
 export const initialMaintenanceBill = {
   month: 'November 2026',
   dueDate: '15 Nov 2026',
   amount: 4250,
   status: 'Unpaid',
+  flat: 'Flat B-402 (3 BHK • 1,750 sq.ft)',
   breakdown: [
-    { title: 'Society Maintenance Charge', amount: 3200 },
-    { title: 'Sinking Fund', amount: 500 },
-    { title: 'Water & Common Utility', amount: 450 },
-    { title: 'Clubhouse Subscription', amount: 100 },
+    { title: 'Society Maintenance Charge (@ ₹2.4/sqft)', amount: 3200 },
+    { title: 'Sinking Fund Allocation', amount: 500 },
+    { title: 'Water & Common Utilities', amount: 450 },
+    { title: 'Clubhouse & Sports Amenities', amount: 100 },
   ],
 };
-

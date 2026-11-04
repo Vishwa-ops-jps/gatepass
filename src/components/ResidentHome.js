@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { communityPoll } from '../data/mockData';
 
 export default function ResidentHome({
   pendingRequests,
@@ -18,7 +19,34 @@ export default function ResidentHome({
   onQuickAction,
   onOpenSOS,
   onOpenQRModal,
+  onOpenHelpdesk,
+  onOpenVehicleFinder,
+  onSelectPendingForCall,
 }) {
+  const [poll, setPoll] = useState(communityPoll);
+
+  const handleVote = (optionId) => {
+    if (poll.hasVoted) return;
+    const updatedOptions = poll.options.map((opt) => {
+      if (opt.id === optionId) {
+        return { ...opt, votes: opt.votes + 1 };
+      }
+      return opt;
+    });
+    const newTotal = poll.totalVotes + 1;
+    const withPercentages = updatedOptions.map((opt) => ({
+      ...opt,
+      percent: Math.round((opt.votes / newTotal) * 100),
+    }));
+    setPoll({
+      ...poll,
+      totalVotes: newTotal,
+      options: withPercentages,
+      hasVoted: true,
+      selectedId: optionId,
+    });
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Hero Banner with GatePass Branding */}
@@ -39,38 +67,41 @@ export default function ResidentHome({
         </View>
       </View>
 
-      {/* Pending Approvals Section (Top Priority Alert) */}
+      {/* Pending Approvals Section (Top Priority Alert with CCTV preview tap) */}
       {pendingRequests.length > 0 && (
         <View style={styles.pendingSection}>
           <View style={styles.pendingHeader}>
             <View style={styles.pulseDot} />
             <Text style={styles.pendingTitle}>
-              Pending Approval ({pendingRequests.length})
+              Waiting at Gate ({pendingRequests.length})
             </Text>
-            <Text style={styles.atGateTag}>At Society Gate</Text>
+            <Text style={styles.atGateTag}>Tap for Intercom Cam</Text>
           </View>
 
           {pendingRequests.map((req) => (
-            <View key={req.id} style={styles.reqCard}>
+            <TouchableOpacity
+              key={req.id}
+              style={styles.reqCard}
+              onPress={() => onSelectPendingForCall && onSelectPendingForCall(req)}
+              activeOpacity={0.9}
+            >
               <View style={styles.reqTop}>
-                <View style={styles.avatarBox}>
-                  <Ionicons
-                    name={
-                      req.category === 'delivery'
-                        ? 'fast-food-outline'
-                        : req.category === 'cab'
-                        ? 'car-outline'
-                        : 'person-outline'
-                    }
-                    size={24}
-                    color={colors.primary}
-                  />
-                </View>
+                <Image
+                  source={{
+                    uri:
+                      req.image ||
+                      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+                  }}
+                  style={styles.avatarImg}
+                />
 
                 <View style={styles.reqInfo}>
                   <View style={styles.reqTitleRow}>
                     <Text style={styles.reqName}>{req.name}</Text>
-                    <Text style={styles.reqTime}>{req.time}</Text>
+                    <View style={styles.ringingPill}>
+                      <Ionicons name="call" size={11} color="#DC2626" />
+                      <Text style={styles.ringingText}>Ringing</Text>
+                    </View>
                   </View>
                   <Text style={styles.reqPurpose}>{req.purpose}</Text>
                   <View style={styles.metaRow}>
@@ -117,7 +148,7 @@ export default function ResidentHome({
                   <Text style={styles.allowBtnText}>Allow Entry</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -187,14 +218,14 @@ export default function ResidentHome({
           {/* 5. Vehicle Access */}
           <TouchableOpacity
             style={styles.gridCard}
-            onPress={() => onQuickAction('cab')}
+            onPress={onOpenVehicleFinder}
             activeOpacity={0.75}
           >
             <View style={[styles.gridIconCircle, { backgroundColor: '#F0F9FF' }]}>
               <Ionicons name="car-sport" size={24} color="#0284C7" />
             </View>
             <Text style={styles.gridTitle}>Vehicle Access</Text>
-            <Text style={styles.gridSub}>Cab & Parking</Text>
+            <Text style={styles.gridSub}>Parking & Lookup</Text>
           </TouchableOpacity>
 
           {/* 6. Instant Alerts / SOS */}
@@ -210,6 +241,95 @@ export default function ResidentHome({
             <Text style={styles.gridSub}>Emergency SOS</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Community Quick Utilities Strip (Helpdesk, Directory, Vehicle) */}
+      <View style={styles.quickUtilityBar}>
+        <TouchableOpacity style={styles.utilItem} onPress={onOpenHelpdesk}>
+          <View style={[styles.utilIcon, { backgroundColor: '#EFF6FF' }]}>
+            <Ionicons name="build-outline" size={18} color="#2563EB" />
+          </View>
+          <Text style={styles.utilText}>Helpdesk & Repairs</Text>
+          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.utilItem} onPress={onOpenVehicleFinder}>
+          <View style={[styles.utilIcon, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="search-outline" size={18} color="#D97706" />
+          </View>
+          <Text style={styles.utilText}>Find Vehicle Owner</Text>
+          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Interactive Society Community Poll (MyGate Feature) */}
+      <View style={styles.pollCard}>
+        <View style={styles.pollHeader}>
+          <View style={styles.pollBadge}>
+            <Ionicons name="pie-chart" size={14} color={colors.primary} />
+            <Text style={styles.pollBadgeText}>COMMUNITY POLL</Text>
+          </View>
+          <Text style={styles.pollVotes}>{poll.totalVotes} residents voted</Text>
+        </View>
+
+        <Text style={styles.pollQuestion}>{poll.question}</Text>
+
+        <View style={styles.optionsList}>
+          {poll.options.map((opt) => {
+            const isSelected = poll.selectedId === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[
+                  styles.optionRow,
+                  poll.hasVoted && styles.optionRowVoted,
+                  isSelected && styles.optionRowSelected,
+                ]}
+                onPress={() => handleVote(opt.id)}
+                disabled={poll.hasVoted}
+                activeOpacity={0.7}
+              >
+                {/* Background Progress Fill */}
+                {poll.hasVoted && (
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${opt.percent}%`,
+                        backgroundColor: isSelected ? 'rgba(255, 107, 0, 0.18)' : '#F1F5F9',
+                      },
+                    ]}
+                  />
+                )}
+
+                <View style={styles.optionContent}>
+                  <Text
+                    style={[
+                      styles.optionLabel,
+                      isSelected && { color: colors.secondary, fontWeight: '800' },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                  {poll.hasVoted && (
+                    <Text
+                      style={[
+                        styles.optionPercent,
+                        isSelected && { color: colors.secondary, fontWeight: '800' },
+                      ]}
+                    >
+                      {opt.percent}%
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {poll.hasVoted && (
+          <Text style={styles.votedNote}>✅ Your vote has been recorded anonymously.</Text>
+        )}
       </View>
 
       {/* Recent Gate Activity Log */}
@@ -372,13 +492,11 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  avatarBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  avatarImg: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   reqInfo: {
     flex: 1,
@@ -393,9 +511,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  reqTime: {
-    fontSize: 11,
-    color: colors.textMuted,
+  ringingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  ringingText: {
+    fontSize: 10,
+    color: '#DC2626',
+    fontWeight: '800',
   },
   reqPurpose: {
     fontSize: 12,
@@ -467,7 +595,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   section: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -530,6 +658,118 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
+  quickUtilityBar: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  utilItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+  },
+  utilIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  utilText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  pollCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pollHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pollBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  pollBadgeText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  pollVotes: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  pollQuestion: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  optionsList: {
+    gap: 8,
+  },
+  optionRow: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#FAFAFA',
+  },
+  optionRowVoted: {
+    borderColor: '#E2E8F0',
+  },
+  optionRowSelected: {
+    borderColor: colors.secondary,
+  },
+  progressFill: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  optionLabel: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  optionPercent: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  votedNote: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: '600',
+    marginTop: 8,
+  },
   activityList: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -582,4 +822,3 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
-

@@ -161,3 +161,4 @@ export async function apiTriggerSOS(type) {
     body: JSON.stringify({ type, flat: 'Flat B-402' }),
   });
 }
+

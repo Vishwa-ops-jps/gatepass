@@ -19,9 +19,14 @@ import MaintenanceTab from './src/components/MaintenanceTab';
 import QuickActionModal from './src/components/QuickActionModal';
 import QRPassModal from './src/components/QRPassModal';
 import SOSModal from './src/components/SOSModal';
+import IntercomCallModal from './src/components/IntercomCallModal';
+import HelpdeskModal from './src/components/HelpdeskModal';
+import VehicleFinderModal from './src/components/VehicleFinderModal';
 import {
   initialPendingRequests,
   initialRecentActivity,
+  initialHelpdeskTickets,
+  registeredVehicles,
 } from './src/data/mockData';
 import {
   initWebSocket,
@@ -45,6 +50,7 @@ export default function App() {
     { id: 'v-1', name: 'Dr. Alok Verma', flat: 'B-402', inTime: '10:45 AM' },
     { id: 'v-2', name: 'Urban Company AC Tech', flat: 'B-201', inTime: '11:10 AM' },
   ]);
+  const [tickets, setTickets] = useState(initialHelpdeskTickets);
   const [backendConnected, setBackendConnected] = useState(false);
 
   // Modal States
@@ -53,6 +59,9 @@ export default function App() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [currentQRPass, setCurrentQRPass] = useState(null);
   const [sosModalVisible, setSosModalVisible] = useState(false);
+  const [intercomRequest, setIntercomRequest] = useState(null);
+  const [helpdeskVisible, setHelpdeskVisible] = useState(false);
+  const [vehicleFinderVisible, setVehicleFinderVisible] = useState(false);
 
   // Connect to Backend & Realtime WebSockets on Mount
   useEffect(() => {
@@ -80,10 +89,13 @@ export default function App() {
 
         case 'REQUEST_CREATED':
           setPendingRequests((prev) => [data, ...prev.filter((r) => r.id !== data.id)]);
+          // If in resident view, automatically pop up the Intercom CCTV call screen!
+          setIntercomRequest(data);
           break;
 
         case 'REQUEST_RESOLVED':
           setPendingRequests((prev) => prev.filter((r) => r.id !== data.requestId));
+          setIntercomRequest(null);
           if (data.activity) {
             setRecentActivity((prev) => [data.activity, ...prev]);
           }
@@ -131,8 +143,8 @@ export default function App() {
     const target = pendingRequests.find((r) => r.id === id);
     if (!target) return;
 
-    // Optimistic local update
     setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+    setIntercomRequest(null);
 
     const newActivity = {
       id: 'act-' + Date.now(),
@@ -158,12 +170,9 @@ export default function App() {
       ]);
     }
 
-    // Call backend API
     try {
       await apiApproveRequest(id, leaveAtGate);
-    } catch (e) {
-      // Handled gracefully in offline mode
-    }
+    } catch (e) {}
 
     Alert.alert(
       leaveAtGate ? 'Parcel Kept at Gate' : 'Entry Approved!',
@@ -177,6 +186,7 @@ export default function App() {
     if (!target) return;
 
     setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+    setIntercomRequest(null);
 
     const newActivity = {
       id: 'act-' + Date.now(),
@@ -289,6 +299,9 @@ export default function App() {
                   setCurrentQRPass(pass);
                   setQrModalVisible(true);
                 }}
+                onOpenHelpdesk={() => setHelpdeskVisible(true)}
+                onOpenVehicleFinder={() => setVehicleFinderVisible(true)}
+                onSelectPendingForCall={(req) => setIntercomRequest(req)}
               />
             )}
             {activeTab === 'staff' && <StaffTab />}
@@ -418,6 +431,30 @@ export default function App() {
         onTriggerAlert={(item) => {
           apiTriggerSOS(item.label).catch(() => {});
         }}
+      />
+
+      {/* Intercom CCTV Video Call Modal */}
+      <IntercomCallModal
+        visible={!!intercomRequest}
+        request={intercomRequest}
+        onApprove={(id) => handleApproveRequest(id, false)}
+        onDeny={(id) => handleDenyRequest(id)}
+        onLeaveAtGate={(id) => handleApproveRequest(id, true)}
+      />
+
+      {/* Helpdesk / Maintenance Ticketing Modal */}
+      <HelpdeskModal
+        visible={helpdeskVisible}
+        tickets={tickets}
+        onClose={() => setHelpdeskVisible(false)}
+        onAddTicket={(newT) => setTickets((prev) => [newT, ...prev])}
+      />
+
+      {/* Find Vehicle Owner Modal */}
+      <VehicleFinderModal
+        visible={vehicleFinderVisible}
+        vehicles={registeredVehicles}
+        onClose={() => setVehicleFinderVisible(false)}
       />
     </SafeAreaView>
   );

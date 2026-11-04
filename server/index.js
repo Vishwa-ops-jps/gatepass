@@ -355,3 +355,4 @@ server.listen(PORT, () => {
   console.log(`[GatePass Server] Running on http://localhost:${PORT}`);
   console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
 });
+

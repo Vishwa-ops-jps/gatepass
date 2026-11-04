@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { apiVerifyPasscode } from '../services/api';
+import ScannerModal from './ScannerModal';
 
 const QUICK_DELIVERY_TAGS = ['Zomato', 'Swiggy', 'Blinkit', 'Amazon', 'Zepto'];
 
@@ -25,6 +26,7 @@ export default function GuardHome({
   const [passcode, setPasscode] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('guest');
   const [vehicleNo, setVehicleNo] = useState('');
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const handleVerifyPasscode = async () => {
     if (!passcode) {
@@ -57,15 +59,18 @@ export default function GuardHome({
       gate: 'Main Gate 1',
       time: 'Just now',
       purpose: `Visiting Flat ${flatNo}`,
+      flat: flatNo,
       status: 'pending',
+      image: selectedCategory === 'delivery'
+        ? 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     };
 
     onSendApprovalRequest(newRequest);
     Alert.alert(
-      'Approval Sent to Resident!',
-      `Intercom & mobile alert sent to Flat ${flatNo} for ${name}. Waiting for resident tap.`
+      'Calling Resident Flat! 📞',
+      `Intercom ringing initiated at Flat ${flatNo} for ${name}. CCTV feed sent to resident.`
     );
-    // Reset form
     setVisitorName('');
     setPhone('');
     setVehicleNo('');
@@ -73,15 +78,15 @@ export default function GuardHome({
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Guard Status Banner */}
+      {/* Guard Status & Live Shift Banner */}
       <View style={styles.guardBanner}>
         <View style={styles.guardBannerLeft}>
           <View style={styles.shieldIconBox}>
             <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.guardGateText}>SECURITY DESK • GATE #1</Text>
-            <Text style={styles.guardOfficerText}>Duty Officer: Rajesh Kumar</Text>
+            <Text style={styles.guardGateText}>SECURITY TERMINAL • GATE #1</Text>
+            <Text style={styles.guardOfficerText}>Duty Guard: Rajesh Kumar</Text>
           </View>
         </View>
         <View style={styles.liveIndicator}>
@@ -90,14 +95,32 @@ export default function GuardHome({
         </View>
       </View>
 
-      {/* Quick Passcode Scanner / Validator */}
+      {/* Guard Shift Metrics */}
+      <View style={styles.metricsRow}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricVal}>48</Text>
+          <Text style={styles.metricLabel}>Entries Today</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={[styles.metricVal, { color: colors.secondary }]}>
+            {activeVisitors.length}
+          </Text>
+          <Text style={styles.metricLabel}>Inside Now</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={[styles.metricVal, { color: colors.success }]}>16</Text>
+          <Text style={styles.metricLabel}>Pre-Approved</Text>
+        </View>
+      </View>
+
+      {/* QR Scanner & Passcode Validation Card */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Ionicons name="qr-code-outline" size={20} color={colors.secondary} />
-          <Text style={styles.cardTitle}>Verify Digital GatePass / Code</Text>
+          <Text style={styles.cardTitle}>Verify GatePass (Scan / Code)</Text>
         </View>
         <Text style={styles.cardSub}>
-          Resident pre-approved visitors have a 6-digit code
+          Scan visitor QR pass or verify 6-digit OTP code
         </Text>
 
         <View style={styles.passcodeRow}>
@@ -117,14 +140,23 @@ export default function GuardHome({
             <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
             <Text style={styles.verifyBtnText}>Verify</Text>
           </TouchableOpacity>
+
+          {/* Open Camera Scanner */}
+          <TouchableOpacity
+            style={styles.cameraBtn}
+            onPress={() => setScannerVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="camera" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Manual Check-In Form */}
+      {/* Manual Check-In & Intercom Call Form */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Ionicons name="person-add-outline" size={20} color={colors.primary} />
-          <Text style={styles.cardTitle}>New Visitor Check-In</Text>
+          <Text style={styles.cardTitle}>Visitor Check-In & Ring Flat</Text>
         </View>
 
         {/* Category Selector */}
@@ -225,38 +257,57 @@ export default function GuardHome({
           onPress={handleSendRequest}
           activeOpacity={0.8}
         >
-          <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.sendAlertBtnText}>Ring Flat & Request Entry</Text>
+          <Ionicons name="call" size={18} color="#FFFFFF" />
+          <Text style={styles.sendAlertBtnText}>Call Flat {flatNo} & Request Entry</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Visitors Currently Inside Society */}
+      {/* Visitors Currently Inside Society (with Overstay Tracker) */}
       <View style={[styles.card, { marginBottom: 30 }]}>
         <View style={styles.cardHeader}>
           <Ionicons name="log-in-outline" size={20} color={colors.primary} />
-          <Text style={styles.cardTitle}>Inside Society ({activeVisitors.length})</Text>
+          <Text style={styles.cardTitle}>Visitors Inside Campus ({activeVisitors.length})</Text>
         </View>
 
-        {activeVisitors.map((v) => (
-          <View key={v.id} style={styles.insideItem}>
-            <View style={styles.insideAvatar}>
-              <Ionicons name="person" size={18} color={colors.primary} />
+        {activeVisitors.map((v, idx) => {
+          const isOverstay = idx === 0; // Simulate overstay indicator
+          return (
+            <View key={v.id} style={styles.insideItem}>
+              <View style={styles.insideAvatar}>
+                <Ionicons name="person" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.insideDetails}>
+                <View style={styles.insideNameRow}>
+                  <Text style={styles.insideName}>{v.name}</Text>
+                  {isOverstay && (
+                    <View style={styles.overstayBadge}>
+                      <Text style={styles.overstayText}>Overstay 45m</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.insideMeta}>
+                  Visiting {v.flat || 'B-402'} • In since {v.inTime || '11:15 AM'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.checkoutBtn}
+                onPress={() => onCheckOutVisitor(v.id)}
+              >
+                <Text style={styles.checkoutBtnText}>Check Out</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.insideDetails}>
-              <Text style={styles.insideName}>{v.name}</Text>
-              <Text style={styles.insideMeta}>
-                Visiting {v.flat || 'B-402'} • In since {v.inTime || '11:15 AM'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.checkoutBtn}
-              onPress={() => onCheckOutVisitor(v.id)}
-            >
-              <Text style={styles.checkoutBtnText}>Check Out</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+          );
+        })}
       </View>
+
+      {/* Scanner Viewfinder Modal */}
+      <ScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onScanSuccess={({ code, name }) => {
+          setPasscode(code);
+        }}
+      />
     </ScrollView>
   );
 }
@@ -274,7 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   guardBannerLeft: {
     flexDirection: 'row',
@@ -320,6 +371,31 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
   },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  metricVal: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.primaryDark,
+  },
+  metricLabel: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
@@ -351,7 +427,7 @@ const styles = StyleSheet.create({
   },
   passcodeRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   passcodeInput: {
     flex: 1,
@@ -361,7 +437,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 1,
   },
@@ -369,14 +445,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
+    gap: 4,
+    paddingHorizontal: 14,
     borderRadius: 12,
   },
   verifyBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
+  },
+  cameraBtn: {
+    backgroundColor: colors.secondary,
+    width: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -478,10 +561,26 @@ const styles = StyleSheet.create({
   insideDetails: {
     flex: 1,
   },
+  insideNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   insideName: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  overstayBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  overstayText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#DC2626',
   },
   insideMeta: {
     fontSize: 11,
@@ -500,4 +599,3 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
 });
-
