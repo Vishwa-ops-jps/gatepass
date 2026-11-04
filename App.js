@@ -22,6 +22,7 @@ import SOSModal from './src/components/SOSModal';
 import IntercomCallModal from './src/components/IntercomCallModal';
 import HelpdeskModal from './src/components/HelpdeskModal';
 import VehicleFinderModal from './src/components/VehicleFinderModal';
+import LoginScreen from './src/components/LoginScreen';
 import {
   initialPendingRequests,
   initialRecentActivity,
@@ -40,6 +41,7 @@ import {
 } from './src/services/api';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(null); // null means show LoginScreen
   const [role, setRole] = useState('resident'); // 'resident' | 'guard'
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'staff' | 'amenities' | 'maintenance'
 
@@ -136,6 +138,36 @@ export default function App() {
   const handleToggleRole = () => {
     const nextRole = role === 'resident' ? 'guard' : 'resident';
     setRole(nextRole);
+    if (nextRole === 'guard') {
+      setCurrentUser((prev) => ({
+        ...prev,
+        role: 'guard',
+        name: prev?.badgeId ? prev.name : 'Rajesh Kumar (Duty Officer)',
+        gate: prev?.gate || 'Main Gate #1',
+      }));
+    } else {
+      setCurrentUser((prev) => ({
+        ...prev,
+        role: 'resident',
+        name: prev?.flat ? prev.name : 'Vishwa (Resident Owner)',
+        flat: prev?.flat || 'B-402',
+      }));
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      `Log out from GatePass (${currentUser?.name || 'Current User'})?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => setCurrentUser(null),
+        },
+      ]
+    );
   };
 
   // Handle Resident Approving a Visitor
@@ -251,16 +283,30 @@ export default function App() {
     } catch (e) {}
   };
 
+  // If not logged in, show Login Screen (for Resident & Security Staff)
+  if (!currentUser) {
+    return (
+      <LoginScreen
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setRole(user.role || 'resident');
+        }}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
 
-      {/* Top Header with GatePass Logo, Mode Switcher & Live Connection Indicator */}
+      {/* Top Header with GatePass Logo, Mode Switcher, User Info & Logout */}
       <Header
         role={role}
         onToggleRole={handleToggleRole}
         pendingCount={pendingRequests.length}
         backendConnected={backendConnected}
+        currentUser={currentUser}
+        onLogout={handleLogout}
         onOpenNotifications={() => {
           Alert.alert(
             'GatePass Notifications',

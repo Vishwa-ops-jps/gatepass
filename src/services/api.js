@@ -81,6 +81,17 @@ async function apiRequest(path, options = {}) {
 }
 
 // 1. Fetch initial live data from backend
+export async function apiLogin(credentials) {
+  return await apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  });
+}
+
+export async function apiGetDemoUsers() {
+  return await apiRequest('/auth/demo-users').catch(() => null);
+}
+
 export async function fetchInitialData() {
   const [requests, activity, activeVisitors, staff, amenities, maintenance] = await Promise.all([
     apiRequest('/requests').catch(() => null),

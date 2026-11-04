@@ -49,6 +49,125 @@ wss.on('connection', (ws) => {
 
 // REST Endpoints
 
+// 0. Authentication (Resident & Security Staff)
+const RESIDENT_ACCOUNTS = [
+  {
+    id: 'res-1',
+    name: 'Vishwa',
+    phone: '9876543210',
+    role: 'resident',
+    flat: 'B-402',
+    society: 'Emerald Heights Residency',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'res-2',
+    name: 'Pooja Malhotra',
+    phone: '9811122233',
+    role: 'resident',
+    flat: 'A-104',
+    society: 'Emerald Heights Residency',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+const GUARD_ACCOUNTS = [
+  {
+    id: 'sec-104',
+    name: 'Rajesh Kumar',
+    badgeId: 'SEC-104',
+    phone: '9900011222',
+    role: 'guard',
+    gate: 'Main Gate #1',
+    shift: 'Morning Duty (06:00 AM - 02:00 PM)',
+    society: 'Emerald Heights Residency',
+    pin: '1234',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'sec-108',
+    name: 'Sunil Shinde',
+    badgeId: 'SEC-108',
+    phone: '9900033444',
+    role: 'guard',
+    gate: 'Service Gate #2',
+    shift: 'General Duty (09:00 AM - 06:00 PM)',
+    society: 'Emerald Heights Residency',
+    pin: '1234',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+app.get('/api/auth/demo-users', (req, res) => {
+  res.json({
+    residents: RESIDENT_ACCOUNTS,
+    guards: GUARD_ACCOUNTS,
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { role, identifier, pinOrOtp, flat, gate } = req.body;
+
+  if (role === 'guard') {
+    // Guard login by Badge ID or Phone + PIN
+    const cleanId = (identifier || '').trim().toUpperCase();
+    const guard = GUARD_ACCOUNTS.find(
+      (g) => g.badgeId === cleanId || g.phone === identifier || g.name.toLowerCase().includes(identifier.toLowerCase())
+    );
+
+    if (guard) {
+      if (pinOrOtp && pinOrOtp !== guard.pin && pinOrOtp !== '1234') {
+        return res.status(401).json({ error: 'Incorrect 4-digit Security PIN' });
+      }
+      return res.json({
+        success: true,
+        user: { ...guard, gate: gate || guard.gate, token: 'gp_sec_' + Date.now() },
+      });
+    }
+
+    // Dynamic fallback for any valid guard entry
+    return res.json({
+      success: true,
+      user: {
+        id: 'sec-' + Date.now(),
+        name: identifier || 'Security Duty Officer',
+        badgeId: identifier.toUpperCase().startsWith('SEC-') ? identifier.toUpperCase() : 'SEC-' + Math.floor(100 + Math.random() * 900),
+        phone: identifier,
+        role: 'guard',
+        gate: gate || 'Main Gate #1',
+        shift: 'Active Shift',
+        society: 'Emerald Heights Residency',
+        token: 'gp_sec_' + Date.now(),
+      },
+    });
+  } else {
+    // Resident login by Phone Number + OTP
+    const cleanPhone = (identifier || '').replace(/\D/g, '');
+    const resident = RESIDENT_ACCOUNTS.find((r) => r.phone === cleanPhone || r.flat === (flat || identifier));
+
+    if (resident) {
+      return res.json({
+        success: true,
+        user: { ...resident, flat: flat || resident.flat, token: 'gp_res_' + Date.now() },
+      });
+    }
+
+    // Dynamic fallback for custom resident
+    return res.json({
+      success: true,
+      user: {
+        id: 'res-' + Date.now(),
+        name: 'Resident (' + (flat || 'B-402') + ')',
+        phone: identifier || '9876543210',
+        role: 'resident',
+        flat: flat || 'B-402',
+        society: 'Emerald Heights Residency',
+        token: 'gp_res_' + Date.now(),
+      },
+    });
+  }
+});
+
 // 1. Health & Status
 app.get('/api/health', (req, res) => {
   res.json({

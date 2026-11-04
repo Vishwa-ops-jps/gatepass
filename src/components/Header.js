@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function Header({ role, onToggleRole, pendingCount, onOpenNotifications, backendConnected }) {
+export default function Header({
+  role,
+  onToggleRole,
+  pendingCount,
+  onOpenNotifications,
+  backendConnected,
+  currentUser,
+  onLogout,
+}) {
   return (
     <View style={styles.container}>
       {/* Top Bar with Logo & Actions */}
@@ -18,7 +26,12 @@ export default function Header({ role, onToggleRole, pendingCount, onOpenNotific
 
         <View style={styles.actionsRow}>
           {/* Live Sync Dot */}
-          <View style={[styles.syncDot, { backgroundColor: backendConnected ? '#10B981' : '#94A3B8' }]} />
+          <View
+            style={[
+              styles.syncDot,
+              { backgroundColor: backendConnected ? '#10B981' : '#94A3B8' },
+            ]}
+          />
 
           {/* Role Switcher Pill */}
           <TouchableOpacity
@@ -31,7 +44,7 @@ export default function Header({ role, onToggleRole, pendingCount, onOpenNotific
           >
             <Ionicons
               name={role === 'guard' ? 'shield-checkmark' : 'home'}
-              size={14}
+              size={13}
               color={role === 'guard' ? '#FFFFFF' : colors.primary}
             />
             <Text
@@ -40,7 +53,7 @@ export default function Header({ role, onToggleRole, pendingCount, onOpenNotific
                 role === 'guard' ? styles.roleBadgeTextGuard : styles.roleBadgeTextResident,
               ]}
             >
-              {role === 'guard' ? 'Guard Desk' : 'Resident'}
+              {role === 'guard' ? 'Guard' : 'Resident'}
             </Text>
           </TouchableOpacity>
 
@@ -50,25 +63,40 @@ export default function Header({ role, onToggleRole, pendingCount, onOpenNotific
             onPress={onOpenNotifications}
             activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+            <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
             {pendingCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{pendingCount}</Text>
               </View>
             )}
           </TouchableOpacity>
+
+          {/* Logout / Switch Profile Button */}
+          {onLogout && (
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={onLogout}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#CBD5E1" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Community Location Strip */}
+      {/* Community Location & User Info Strip */}
       <View style={styles.subBar}>
         <View style={styles.locationInfo}>
-          <Ionicons name="business-outline" size={14} color="#CBD5E1" />
-          <Text style={styles.societyName}>Emerald Heights Residency</Text>
+          <Ionicons name="person-circle-outline" size={16} color="#CBD5E1" />
+          <Text style={styles.societyName}>
+            {currentUser?.name || (role === 'guard' ? 'Rajesh Kumar (Guard)' : 'Vishwa')}
+          </Text>
         </View>
         <View style={styles.flatTag}>
           <Text style={styles.flatText}>
-            {role === 'guard' ? 'Gate #1 Main Gate' : 'Flat B-402'}
+            {role === 'guard'
+              ? currentUser?.gate || 'Gate #1 Main Gate'
+              : `Flat ${currentUser?.flat || 'B-402'}`}
           </Text>
         </View>
       </View>
@@ -140,13 +168,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  logoutBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badge: {
     position: 'absolute',
