@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { apiVerifyPasscode } from '../services/api';
 
 const QUICK_DELIVERY_TAGS = ['Zomato', 'Swiggy', 'Blinkit', 'Amazon', 'Zepto'];
 
@@ -25,16 +26,18 @@ export default function GuardHome({
   const [selectedCategory, setSelectedCategory] = useState('guest');
   const [vehicleNo, setVehicleNo] = useState('');
 
-  const handleVerifyPasscode = () => {
+  const handleVerifyPasscode = async () => {
     if (!passcode) {
       Alert.alert('GatePass Verification', 'Please enter a 6-digit GatePass code');
       return;
     }
-    Alert.alert(
-      'Passcode Validated ✅',
-      `Passcode ${passcode.toUpperCase()} is valid for Flat B-402 (Invited Guest). Entry Granted!`
-    );
-    setPasscode('');
+    try {
+      const res = await apiVerifyPasscode(passcode);
+      Alert.alert('Passcode Validated ✅', res.message || 'Passcode is valid. Entry granted!');
+      setPasscode('');
+    } catch (e) {
+      Alert.alert('Verification Failed', e.message || 'Invalid or expired passcode.');
+    }
   };
 
   const handleSendRequest = () => {

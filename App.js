@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -23,6 +23,16 @@ import {
   initialPendingRequests,
   initialRecentActivity,
 } from './src/data/mockData';
+import {
+  initWebSocket,
+  fetchInitialData,
+  apiCreateVisitorRequest,
+  apiApproveRequest,
+  apiDenyRequest,
+  apiCreatePass,
+  apiCheckOutVisitor,
+  apiTriggerSOS,
+} from './src/services/api';
 
 export default function App() {
   const [role, setRole] = useState('resident'); // 'resident' | 'guard'
@@ -35,6 +45,7 @@ export default function App() {
     { id: 'v-1', name: 'Dr. Alok Verma', flat: 'B-402', inTime: '10:45 AM' },
     { id: 'v-2', name: 'Urban Company AC Tech', flat: 'B-201', inTime: '11:10 AM' },
   ]);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   // Modal States
   const [actionModalVisible, setActionModalVisible] = useState(false);
@@ -43,6 +54,72 @@ export default function App() {
   const [currentQRPass, setCurrentQRPass] = useState(null);
   const [sosModalVisible, setSosModalVisible] = useState(false);
 
+  // Connect to Backend & Realtime WebSockets on Mount
+  useEffect(() => {
+    // 1. Fetch initial live state
+    fetchInitialData().then((data) => {
+      if (data && data.requests) {
+        setBackendConnected(true);
+        if (data.requests.length > 0) setPendingRequests(data.requests);
+        if (data.activity && data.activity.length > 0) setRecentActivity(data.activity);
+        if (data.activeVisitors && data.activeVisitors.length > 0) setActiveVisitors(data.activeVisitors);
+      }
+    });
+
+    // 2. Realtime WebSocket listener
+    const handleWebSocketEvent = (msg) => {
+      setBackendConnected(true);
+      const { event, data } = msg;
+
+      switch (event) {
+        case 'INIT_STATE':
+          if (data.pendingRequests) setPendingRequests(data.pendingRequests);
+          if (data.recentActivity) setRecentActivity(data.recentActivity);
+          if (data.activeVisitors) setActiveVisitors(data.activeVisitors);
+          break;
+
+        case 'REQUEST_CREATED':
+          setPendingRequests((prev) => [data, ...prev.filter((r) => r.id !== data.id)]);
+          break;
+
+        case 'REQUEST_RESOLVED':
+          setPendingRequests((prev) => prev.filter((r) => r.id !== data.requestId));
+          if (data.activity) {
+            setRecentActivity((prev) => [data.activity, ...prev]);
+          }
+          if (data.activeVisitor) {
+            setActiveVisitors((prev) => [data.activeVisitor, ...prev]);
+          }
+          break;
+
+        case 'PASS_VERIFIED':
+          if (data.activeVisitor) {
+            setActiveVisitors((prev) => [data.activeVisitor, ...prev]);
+          }
+          if (data.activity) {
+            setRecentActivity((prev) => [data.activity, ...prev]);
+          }
+          break;
+
+        case 'VISITOR_CHECKED_OUT':
+          setActiveVisitors((prev) => prev.filter((v) => v.id !== data.visitorId));
+          if (data.activity) {
+            setRecentActivity((prev) => [data.activity, ...prev]);
+          }
+          break;
+
+        case 'EMERGENCY_TRIGGERED':
+          Alert.alert('🚨 SECURITY EMERGENCY ALERT!', `Alert from ${data.flat}: ${data.type}`);
+          break;
+
+        default:
+          break;
+      }
+    };
+
+    initWebSocket(handleWebSocketEvent);
+  }, []);
+
   // Toggle between Resident and Guard Desk mode
   const handleToggleRole = () => {
     const nextRole = role === 'resident' ? 'guard' : 'resident';
@@ -50,10 +127,11 @@ export default function App() {
   };
 
   // Handle Resident Approving a Visitor
-  const handleApproveRequest = (id, leaveAtGate = false) => {
+  const handleApproveRequest = async (id, leaveAtGate = false) => {
     const target = pendingRequests.find((r) => r.id === id);
     if (!target) return;
 
+    // Optimistic local update
     setPendingRequests((prev) => prev.filter((r) => r.id !== id));
 
     const newActivity = {
@@ -66,7 +144,6 @@ export default function App() {
       action: leaveAtGate ? 'Left at Gate' : 'Allowed Entry',
       status: 'approved',
     };
-
     setRecentActivity((prev) => [newActivity, ...prev]);
 
     if (!leaveAtGate) {
@@ -81,6 +158,13 @@ export default function App() {
       ]);
     }
 
+    // Call backend API
+    try {
+      await apiApproveRequest(id, leaveAtGate);
+    } catch (e) {
+      // Handled gracefully in offline mode
+    }
+
     Alert.alert(
       leaveAtGate ? 'Parcel Kept at Gate' : 'Entry Approved!',
       `${target.name} has been notified and granted entry at ${target.gate}.`
@@ -88,7 +172,7 @@ export default function App() {
   };
 
   // Handle Resident Denying a Visitor
-  const handleDenyRequest = (id) => {
+  const handleDenyRequest = async (id) => {
     const target = pendingRequests.find((r) => r.id === id);
     if (!target) return;
 
@@ -104,20 +188,28 @@ export default function App() {
       action: 'Denied Entry',
       status: 'denied',
     };
-
     setRecentActivity((prev) => [newActivity, ...prev]);
+
+    try {
+      await apiDenyRequest(id);
+    } catch (e) {}
+
     Alert.alert('Entry Denied', `${target.name} was denied access by Flat B-402.`);
   };
 
   // Handle Guard sending approval request to resident
-  const handleSendApprovalRequest = (newRequest) => {
+  const handleSendApprovalRequest = async (newRequest) => {
     setPendingRequests((prev) => [newRequest, ...prev]);
+    try {
+      await apiCreateVisitorRequest(newRequest);
+    } catch (e) {}
   };
 
   // Handle Guard checking out visitor
-  const handleCheckOutVisitor = (id) => {
+  const handleCheckOutVisitor = async (id) => {
     const target = activeVisitors.find((v) => v.id === id);
     setActiveVisitors((prev) => prev.filter((v) => v.id !== id));
+
     if (target) {
       setRecentActivity((prev) => [
         {
@@ -132,26 +224,33 @@ export default function App() {
         },
         ...prev,
       ]);
+      try {
+        await apiCheckOutVisitor(id);
+      } catch (e) {}
       Alert.alert('Checked Out', `${target.name} has exited the premises.`);
     }
   };
 
   // Pre-approve pass creation handler
-  const handleCreatePass = (passData) => {
+  const handleCreatePass = async (passData) => {
     setActionModalVisible(false);
     setCurrentQRPass(passData);
     setQrModalVisible(true);
+    try {
+      await apiCreatePass(passData);
+    } catch (e) {}
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
 
-      {/* Top Header with GatePass Logo & Mode Switcher */}
+      {/* Top Header with GatePass Logo, Mode Switcher & Live Connection Indicator */}
       <Header
         role={role}
         onToggleRole={handleToggleRole}
         pendingCount={pendingRequests.length}
+        backendConnected={backendConnected}
         onOpenNotifications={() => {
           Alert.alert(
             'GatePass Notifications',
@@ -182,7 +281,10 @@ export default function App() {
                   setActionType(type);
                   setActionModalVisible(true);
                 }}
-                onOpenSOS={() => setSosModalVisible(true)}
+                onOpenSOS={() => {
+                  setSosModalVisible(true);
+                  apiTriggerSOS('General Emergency').catch(() => {});
+                }}
                 onOpenQRModal={(pass) => {
                   setCurrentQRPass(pass);
                   setQrModalVisible(true);
@@ -313,6 +415,9 @@ export default function App() {
       <SOSModal
         visible={sosModalVisible}
         onClose={() => setSosModalVisible(false)}
+        onTriggerAlert={(item) => {
+          apiTriggerSOS(item.label).catch(() => {});
+        }}
       />
     </SafeAreaView>
   );

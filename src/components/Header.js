@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function Header({ role, onToggleRole, pendingCount, onOpenNotifications }) {
+export default function Header({ role, onToggleRole, pendingCount, onOpenNotifications, backendConnected }) {
   return (
     <View style={styles.container}>
       {/* Top Bar with Logo & Actions */}
@@ -17,6 +17,9 @@ export default function Header({ role, onToggleRole, pendingCount, onOpenNotific
         </View>
 
         <View style={styles.actionsRow}>
+          {/* Live Sync Dot */}
+          <View style={[styles.syncDot, { backgroundColor: backendConnected ? '#10B981' : '#94A3B8' }]} />
+
           {/* Role Switcher Pill */}
           <TouchableOpacity
             style={[
@@ -106,6 +109,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   roleBadge: {
     flexDirection: 'row',
