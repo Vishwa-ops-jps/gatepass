@@ -1,8 +1,9 @@
 const http = require('http');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const { WebSocketServer, WebSocket } = require('ws');
-const store = require('./store');
+const DB = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -10,8 +11,9 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Create HTTP server
+// Create HTTP Server
 const server = http.createServer(app);
 
 // WebSocket Server
@@ -27,163 +29,163 @@ function broadcast(event, data) {
 }
 
 wss.on('connection', (ws) => {
-  console.log('[WebSocket] Client connected. Total clients:', wss.clients.size);
+  console.log(`[WebSocket] Client connected. Total clients: ${wss.clients.size}`);
 
-  // Send initial welcome & full current state
+  // Send initial state from SQLite
   ws.send(
     JSON.stringify({
       event: 'INIT_STATE',
       data: {
-        pendingRequests: store.pendingRequests,
-        recentActivity: store.recentActivity,
-        activeVisitors: store.activeVisitors,
-        maintenance: store.maintenance,
+        pendingRequests: DB.getPendingRequests(),
+        recentActivity: DB.getActivityLogs(),
+        activeVisitors: DB.getActiveVisitors(),
+        maintenance: DB.getMaintenanceBill('B-402'),
       },
     })
   );
 
   ws.on('close', () => {
-    console.log('[WebSocket] Client disconnected.');
+    console.log(`[WebSocket] Client disconnected. Remaining: ${wss.clients.size}`);
   });
 });
 
-// REST Endpoints
-
-// 0. Authentication (Resident & Security Staff)
-const RESIDENT_ACCOUNTS = [
-  {
-    id: 'res-1',
-    name: 'Vishwa',
-    phone: '9876543210',
-    role: 'resident',
-    flat: 'B-402',
-    society: 'Emerald Heights Residency',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'res-2',
-    name: 'Pooja Malhotra',
-    phone: '9811122233',
-    role: 'resident',
-    flat: 'A-104',
-    society: 'Emerald Heights Residency',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-  },
-];
-
-const GUARD_ACCOUNTS = [
-  {
-    id: 'sec-104',
-    name: 'Rajesh Kumar',
-    badgeId: 'SEC-104',
-    phone: '9900011222',
-    role: 'guard',
-    gate: 'Main Gate #1',
-    shift: 'Morning Duty (06:00 AM - 02:00 PM)',
-    society: 'Emerald Heights Residency',
-    pin: '1234',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'sec-108',
-    name: 'Sunil Shinde',
-    badgeId: 'SEC-108',
-    phone: '9900033444',
-    role: 'guard',
-    gate: 'Service Gate #2',
-    shift: 'General Duty (09:00 AM - 06:00 PM)',
-    society: 'Emerald Heights Residency',
-    pin: '1234',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-  },
-];
-
-app.get('/api/auth/demo-users', (req, res) => {
-  res.json({
-    residents: RESIDENT_ACCOUNTS,
-    guards: GUARD_ACCOUNTS,
-  });
+// Serve Main Application on root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.post('/api/auth/login', (req, res) => {
-  const { role, identifier, pinOrOtp, flat, gate } = req.body;
+app.get('/portal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-  if (role === 'guard') {
-    // Guard login by Badge ID or Phone + PIN
-    const cleanId = (identifier || '').trim().toUpperCase();
-    const guard = GUARD_ACCOUNTS.find(
-      (g) => g.badgeId === cleanId || g.phone === identifier || g.name.toLowerCase().includes(identifier.toLowerCase())
-    );
-
-    if (guard) {
-      if (pinOrOtp && pinOrOtp !== guard.pin && pinOrOtp !== '1234') {
-        return res.status(401).json({ error: 'Incorrect 4-digit Security PIN' });
-      }
-      return res.json({
-        success: true,
-        user: { ...guard, gate: gate || guard.gate, token: 'gp_sec_' + Date.now() },
-      });
-    }
-
-    // Dynamic fallback for any valid guard entry
-    return res.json({
-      success: true,
-      user: {
-        id: 'sec-' + Date.now(),
-        name: identifier || 'Security Duty Officer',
-        badgeId: identifier.toUpperCase().startsWith('SEC-') ? identifier.toUpperCase() : 'SEC-' + Math.floor(100 + Math.random() * 900),
-        phone: identifier,
-        role: 'guard',
-        gate: gate || 'Main Gate #1',
-        shift: 'Active Shift',
-        society: 'Emerald Heights Residency',
-        token: 'gp_sec_' + Date.now(),
-      },
-    });
-  } else {
-    // Resident login by Phone Number + OTP
-    const cleanPhone = (identifier || '').replace(/\D/g, '');
-    const resident = RESIDENT_ACCOUNTS.find((r) => r.phone === cleanPhone || r.flat === (flat || identifier));
-
-    if (resident) {
-      return res.json({
-        success: true,
-        user: { ...resident, flat: flat || resident.flat, token: 'gp_res_' + Date.now() },
-      });
-    }
-
-    // Dynamic fallback for custom resident
-    return res.json({
-      success: true,
-      user: {
-        id: 'res-' + Date.now(),
-        name: 'Resident (' + (flat || 'B-402') + ')',
-        phone: identifier || '9876543210',
-        role: 'resident',
-        flat: flat || 'B-402',
-        society: 'Emerald Heights Residency',
-        token: 'gp_res_' + Date.now(),
-      },
-    });
-  }
+app.get('/api-docs', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'api-docs.html'));
 });
 
 // 1. Health & Status
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'GatePass Backend',
+    app: 'GatePass Enterprise Backend',
+    database: 'SQLite (node:sqlite WAL)',
     timestamp: new Date().toISOString(),
     connectedClients: wss.clients.size,
   });
 });
 
-// 2. Pending Requests (Guard & Resident)
-app.get('/api/requests', (req, res) => {
-  res.json(store.pendingRequests);
+// 2. Auth Endpoints
+app.get('/api/auth/demo-users', (req, res) => {
+  res.json(DB.getDemoUsers());
 });
 
-// Guard creates a new visitor check-in request (Rings Resident Flat)
+app.post('/api/auth/login', (req, res) => {
+  const { role, identifier, pinOrOtp, flat, gate, password, phone, email, badgeId } = req.body;
+
+  // 1. Society Admin Login
+  if (role === 'admin') {
+    const adminId = (identifier || email || '').trim().toLowerCase();
+    const adminPwd = (password || pinOrOtp || '').trim();
+
+    const admin = DB.getUserByEmail(adminId) || DB.getUserByBadgeOrPhone(adminId);
+    if (admin) {
+      if (adminPwd && admin.password && adminPwd !== admin.password && adminPwd !== 'admin123') {
+        return res.status(401).json({ error: 'Invalid admin credentials or password' });
+      }
+      return res.json({
+        success: true,
+        user: { ...admin, role: 'admin', token: 'gp_adm_' + Date.now() },
+      });
+    }
+
+    if (adminId.includes('admin') || adminPwd === 'admin123') {
+      return res.json({
+        success: true,
+        user: {
+          id: 'admin-1',
+          name: 'Col. R. S. Rathore (Estate Admin)',
+          email: adminId || 'admin@gatepass.com',
+          role: 'admin',
+          badge_id: 'ADMIN-01',
+          society: 'Emerald Heights Residency',
+          token: 'gp_adm_' + Date.now(),
+        },
+      });
+    }
+
+    return res.status(401).json({ error: 'Admin account not found. Try admin@gatepass.com / admin123' });
+  }
+
+  // 2. Security Guard Login
+  if (role === 'guard' || role === 'security') {
+    const cleanId = (identifier || badgeId || '').trim();
+    let guard = DB.getUserByBadgeOrPhone(cleanId);
+
+    if (guard) {
+      if (pinOrOtp && guard.pin && pinOrOtp !== guard.pin && pinOrOtp !== '1234') {
+        return res.status(401).json({ error: 'Incorrect 4-digit Security PIN' });
+      }
+      return res.json({
+        success: true,
+        user: { ...guard, gate: gate || guard.gate || 'Main Gate #1', token: 'gp_sec_' + Date.now() },
+      });
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: 'sec-' + Date.now(),
+        name: identifier || 'Security Duty Officer',
+        badge_id: cleanId.toUpperCase().startsWith('SEC-') ? cleanId.toUpperCase() : 'SEC-104',
+        role: 'guard',
+        gate: gate || 'Main Gate #1',
+        token: 'gp_sec_' + Date.now(),
+      },
+    });
+  }
+
+  // 3. Resident Owner Login (Requires Flat No + Phone No)
+  const userFlat = (flat || '').trim().toUpperCase();
+  const userPhone = (identifier || phone || '').trim();
+
+  if (!userFlat || !userPhone) {
+    return res.status(400).json({
+      error: 'Flat Number and Phone Number are both required for Resident Owner login.',
+    });
+  }
+
+  const resident = DB.getUserByPhoneAndFlat(userPhone, userFlat);
+  if (resident) {
+    return res.json({
+      success: true,
+      user: {
+        ...resident,
+        flat: userFlat,
+        token: 'gp_res_' + Date.now(),
+      },
+    });
+  }
+
+  // Auto-allow valid flat format (e.g. B-402, A-104, C-201) with entered phone number
+  return res.json({
+    success: true,
+    user: {
+      id: 'res-' + Date.now(),
+      name: `Resident Owner (${userFlat})`,
+      phone: userPhone,
+      role: 'resident',
+      flat: userFlat,
+      society: 'Emerald Heights Residency',
+      token: 'gp_res_' + Date.now(),
+    },
+  });
+});
+
+// 3. Visitor Requests
+app.get('/api/requests', (req, res) => {
+  const { flat } = req.query;
+  res.json(DB.getPendingRequests(flat));
+});
+
 app.post('/api/requests', (req, res) => {
   const { name, phone, type, category, vehicle, gate, purpose, flat } = req.body;
   const newReq = {
@@ -194,51 +196,52 @@ app.post('/api/requests', (req, res) => {
     category: category || 'guest',
     vehicle: vehicle || null,
     gate: gate || 'Main Gate 1',
-    time: 'Just now',
     purpose: purpose || `Visiting Flat ${flat || 'B-402'}`,
-    flat: flat || 'B-402',
+    flat: (flat || 'B-402').toUpperCase(),
     status: 'pending',
+    image: category === 'delivery'
+      ? 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
   };
 
-  store.pendingRequests.unshift(newReq);
+  DB.insertVisitor(newReq);
   broadcast('REQUEST_CREATED', newReq);
 
   res.status(201).json({ success: true, request: newReq });
 });
 
-// Resident Approves visitor
+// Approve Request
 app.put('/api/requests/:id/approve', (req, res) => {
   const { id } = req.params;
   const { leaveAtGate } = req.body;
-  const idx = store.pendingRequests.findIndex((r) => r.id === id);
+  const visitor = DB.getVisitorById(id);
 
-  if (idx === -1) {
+  if (!visitor) {
     return res.status(404).json({ error: 'Request not found' });
   }
 
-  const [reqItem] = store.pendingRequests.splice(idx, 1);
+  DB.updateVisitorStatus(id, leaveAtGate ? 'completed' : 'approved', new Date().toISOString(), null);
 
   const newActivity = {
     id: 'act-' + Date.now(),
-    name: reqItem.name,
-    role: reqItem.type,
-    category: reqItem.category,
-    time: 'Just now',
-    gate: reqItem.gate,
+    name: visitor.name,
+    role: visitor.type,
+    category: visitor.category,
+    gate: visitor.gate,
     action: leaveAtGate ? 'Left at Gate' : 'Allowed Entry',
     status: 'approved',
+    timestamp: 'Just now',
   };
-  store.recentActivity.unshift(newActivity);
+  DB.insertActivity(newActivity);
 
   let newActiveVisitor = null;
   if (!leaveAtGate) {
     newActiveVisitor = {
-      id: 'v-' + Date.now(),
-      name: reqItem.name,
-      flat: reqItem.flat || 'B-402',
+      id: visitor.id,
+      name: visitor.name,
+      flat: visitor.flat,
       inTime: 'Just now',
     };
-    store.activeVisitors.unshift(newActiveVisitor);
   }
 
   const payload = {
@@ -249,229 +252,289 @@ app.put('/api/requests/:id/approve', (req, res) => {
   };
 
   broadcast('REQUEST_RESOLVED', { ...payload, action: 'approved' });
-
   res.json({ success: true, ...payload });
 });
 
-// Resident Denies visitor
+// Deny Request
 app.put('/api/requests/:id/deny', (req, res) => {
   const { id } = req.params;
-  const idx = store.pendingRequests.findIndex((r) => r.id === id);
+  const visitor = DB.getVisitorById(id);
 
-  if (idx === -1) {
+  if (!visitor) {
     return res.status(404).json({ error: 'Request not found' });
   }
 
-  const [reqItem] = store.pendingRequests.splice(idx, 1);
+  DB.updateVisitorStatus(id, 'denied', null, null);
 
   const newActivity = {
     id: 'act-' + Date.now(),
-    name: reqItem.name,
-    role: reqItem.type,
-    category: reqItem.category,
-    time: 'Just now',
-    gate: reqItem.gate,
+    name: visitor.name,
+    role: visitor.type,
+    category: visitor.category,
+    gate: visitor.gate,
     action: 'Denied Entry',
     status: 'denied',
+    timestamp: 'Just now',
   };
-  store.recentActivity.unshift(newActivity);
+  DB.insertActivity(newActivity);
 
   const payload = { requestId: id, activity: newActivity };
   broadcast('REQUEST_RESOLVED', { ...payload, action: 'denied' });
-
   res.json({ success: true, ...payload });
 });
 
-// 3. Pre-Approved Passes
+// 4. Passes
 app.get('/api/passes', (req, res) => {
-  res.json(store.passes);
+  const { flat } = req.query;
+  res.json(DB.getPasses(flat));
 });
 
-// Resident creates pre-approved pass
 app.post('/api/passes', (req, res) => {
-  const { name, phone, type, leaveAtGate } = req.body;
+  const { name, phone, type, leaveAtGate, flat } = req.body;
   const newPass = {
     code: 'GP-' + Math.floor(1000 + Math.random() * 9000),
     name: name || 'Invited Guest',
     phone: phone || '',
     type: type || 'guest',
-    flat: 'B-402',
-    validUntil: 'Tomorrow, 11:59 PM',
-    leaveAtGate: !!leaveAtGate,
-    createdAt: new Date().toISOString(),
+    flat: (flat || 'B-402').toUpperCase(),
+    valid_until: 'Tomorrow, 11:59 PM',
+    leave_at_gate: leaveAtGate ? 1 : 0,
   };
 
-  store.passes.unshift(newPass);
+  DB.insertPass(newPass);
   broadcast('PASS_CREATED', newPass);
 
   res.status(201).json({ success: true, pass: newPass });
 });
 
-// Guard verifies passcode
 app.post('/api/passes/verify', (req, res) => {
   const { code } = req.body;
-  if (!code) {
-    return res.status(400).json({ error: 'Code is required' });
-  }
+  if (!code) return res.status(400).json({ error: 'Code is required' });
 
   const cleanCode = code.trim().toUpperCase();
-  const pass = store.passes.find((p) => p.code.toUpperCase() === cleanCode);
+  const pass = DB.getPassByCode(cleanCode);
 
   if (pass) {
-    // Add to active visitors
     const newActiveVisitor = {
       id: 'v-' + Date.now(),
       name: pass.name,
       flat: pass.flat,
       inTime: 'Just now',
     };
-    store.activeVisitors.unshift(newActiveVisitor);
+    DB.insertVisitor({
+      id: newActiveVisitor.id,
+      name: pass.name,
+      phone: pass.phone,
+      type: 'Pass ' + pass.type,
+      category: pass.type,
+      gate: 'Main Gate 1',
+      purpose: 'Digital GatePass',
+      flat: pass.flat,
+      status: 'approved',
+      in_time: new Date().toISOString(),
+    });
 
     const newActivity = {
       id: 'act-' + Date.now(),
       name: pass.name,
-      role: 'Pre-Approved ' + pass.type,
+      role: 'Pass ' + pass.type,
       category: pass.type,
-      time: 'Just now',
       gate: 'Main Gate 1',
       action: 'Verified & Entered',
       status: 'approved',
+      timestamp: 'Just now',
     };
-    store.recentActivity.unshift(newActivity);
+    DB.insertActivity(newActivity);
 
     broadcast('PASS_VERIFIED', { pass, activeVisitor: newActiveVisitor, activity: newActivity });
-
-    return res.json({
-      valid: true,
-      message: `Passcode ${cleanCode} is valid for Flat ${pass.flat}`,
-      pass,
-    });
+    return res.json({ valid: true, message: `Passcode ${cleanCode} is valid for Flat ${pass.flat}`, pass });
   }
 
-  // Also accept standard demo pattern GP-xxxx
+  // Demo auto-validate if code begins with GP-
   if (cleanCode.startsWith('GP-')) {
-    const tempPass = {
-      code: cleanCode,
-      name: 'Pre-Approved Visitor',
-      flat: 'B-402',
-      type: 'guest',
-    };
-    const newActiveVisitor = {
-      id: 'v-' + Date.now(),
-      name: tempPass.name,
-      flat: 'B-402',
-      inTime: 'Just now',
-    };
-    store.activeVisitors.unshift(newActiveVisitor);
+    const tempPass = { code: cleanCode, name: 'Pre-Approved Guest', flat: 'B-402', type: 'guest' };
+    const newActiveVisitor = { id: 'v-' + Date.now(), name: tempPass.name, flat: 'B-402', inTime: 'Just now' };
     broadcast('PASS_VERIFIED', { pass: tempPass, activeVisitor: newActiveVisitor });
-
-    return res.json({
-      valid: true,
-      message: `Passcode ${cleanCode} validated successfully for Flat B-402`,
-      pass: tempPass,
-    });
+    return res.json({ valid: true, message: `Passcode ${cleanCode} verified for Flat B-402`, pass: tempPass });
   }
 
   res.status(404).json({ valid: false, message: 'Invalid or expired passcode' });
 });
 
-// 4. Visitors Inside & Checkout
+// 5. Active Visitors Inside & Checkout
 app.get('/api/visitors/active', (req, res) => {
-  res.json(store.activeVisitors);
+  const { flat } = req.query;
+  res.json(DB.getActiveVisitors(flat));
 });
 
 app.put('/api/visitors/:id/checkout', (req, res) => {
   const { id } = req.params;
-  const idx = store.activeVisitors.findIndex((v) => v.id === id);
+  const visitor = DB.getVisitorById(id);
 
-  if (idx === -1) {
-    return res.status(404).json({ error: 'Visitor not found' });
-  }
+  if (!visitor) return res.status(404).json({ error: 'Visitor not found' });
 
-  const [visitor] = store.activeVisitors.splice(idx, 1);
+  DB.updateVisitorStatus(id, 'checked_out', null, new Date().toISOString());
 
   const exitActivity = {
     id: 'act-' + Date.now(),
     name: visitor.name,
-    role: 'Visitor',
-    category: 'guest',
-    time: 'Just now',
+    role: visitor.type || 'Visitor',
+    category: visitor.category || 'guest',
     gate: 'Main Gate 1',
     action: 'Checked Out',
     status: 'completed',
+    timestamp: 'Just now',
   };
-  store.recentActivity.unshift(exitActivity);
+  DB.insertActivity(exitActivity);
 
   broadcast('VISITOR_CHECKED_OUT', { visitorId: id, visitor, activity: exitActivity });
-
   res.json({ success: true, visitor, activity: exitActivity });
 });
 
-// 5. Activity Log
+// 6. Activity Logs
 app.get('/api/activity', (req, res) => {
-  res.json(store.recentActivity);
+  const { flat } = req.query;
+  res.json(DB.getActivityLogs(flat));
 });
 
-// 6. Staff & Helpers
+// 7. Helpdesk Tickets
+app.get('/api/helpdesk', (req, res) => {
+  const { flat } = req.query;
+  res.json(DB.getHelpdeskTickets(flat));
+});
+
+app.post('/api/helpdesk', (req, res) => {
+  const { category, title, description, priority, flat } = req.body;
+  const newTicket = {
+    id: 'TICK-' + Math.floor(100 + Math.random() * 900),
+    category: category || 'Electrical',
+    title: title || 'Service Complaint',
+    description: description || '',
+    status: 'In Progress',
+    priority: priority || 'Medium',
+    assigned_to: `Assigned to ${category || 'Facility'} Team`,
+    flat: (flat || 'B-402').toUpperCase(),
+    created_at: 'Just now',
+  };
+
+  DB.insertTicket(newTicket);
+  res.status(201).json({ success: true, ticket: newTicket });
+});
+
+// 8. Staff & Amenities
 app.get('/api/staff', (req, res) => {
-  res.json(store.staff);
+  res.json(DB.getStaff());
 });
 
-// 7. Amenities & Booking
 app.get('/api/amenities', (req, res) => {
-  res.json(store.amenities);
+  res.json(DB.getAmenities());
 });
 
 app.post('/api/amenities/:id/book', (req, res) => {
   const { id } = req.params;
-  const amenity = store.amenities.find((a) => a.id === id);
-
-  if (!amenity) {
-    return res.status(404).json({ error: 'Amenity not found' });
-  }
-
-  broadcast('AMENITY_BOOKED', { amenity, resident: 'Flat B-402' });
-  res.json({ success: true, message: `Slot booked for ${amenity.name}` });
+  const flat = req.body.flat || 'B-402';
+  broadcast('AMENITY_BOOKED', { amenityId: id, resident: 'Flat ' + flat });
+  res.json({ success: true, message: `Reservation submitted for amenity ${id}` });
 });
 
-// 8. Maintenance & Payment
+// 9. Maintenance
 app.get('/api/maintenance', (req, res) => {
-  res.json(store.maintenance);
+  const flat = req.query.flat || 'B-402';
+  const bill = DB.getMaintenanceBill(flat);
+  res.json(bill || { month: 'November 2026', amount: 4250, status: 'Unpaid', flat });
 });
 
 app.post('/api/maintenance/pay', (req, res) => {
-  store.maintenance.status = 'Paid';
-  const receipt = {
-    txnId: 'GP-TXN-' + Date.now().toString().slice(-6),
-    amount: store.maintenance.amount,
-    month: store.maintenance.month,
-    paidAt: new Date().toISOString(),
-  };
+  const flat = (req.body.flat || 'B-402').toUpperCase();
+  const txnId = 'GP-TXN-' + Date.now().toString().slice(-6);
+  DB.payMaintenanceBill(flat, txnId);
 
+  const receipt = { txnId, amount: 4250, month: 'November 2026', flat, paidAt: new Date().toISOString() };
   broadcast('BILL_PAID', receipt);
   res.json({ success: true, receipt });
 });
 
-// 9. Emergency SOS
+// 10. Admin Overview & Society Directory
+app.get('/api/admin/overview', (req, res) => {
+  const activeVisitors = DB.getActiveVisitors();
+  const pendingRequests = DB.getPendingRequests();
+  const allBills = DB.getAllMaintenanceBills();
+  const tickets = DB.getHelpdeskTickets();
+  const staff = DB.getStaff();
+  const activities = DB.getActivityLogs();
+
+  const flats = [
+    { flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-05-MM-9214' },
+    { flat: 'A-104', block: 'A', floor: '1st', owner: 'Pooja Malhotra', phone: '9811122233', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-03-MG-4120' },
+    { flat: 'C-201', block: 'C', floor: '2nd', owner: 'Dr. Alok Verma', phone: '9822233445', status: 'Occupied', dues: 'Paid', vehicle: 'KA-51-AB-8800' },
+    { flat: 'A-101', block: 'A', floor: '1st', owner: 'Suresh Raina', phone: '9811100223', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-EE-3312' },
+    { flat: 'A-202', block: 'A', floor: '2nd', owner: 'Meera Sen', phone: '9844001122', status: 'Occupied', dues: 'Paid', vehicle: 'KA-04-FF-1199' },
+    { flat: 'B-101', block: 'B', floor: '1st', owner: 'Kunal Kapoor', phone: '9877002211', status: 'Occupied', dues: 'Paid', vehicle: 'KA-02-HH-7788' },
+    { flat: 'B-201', block: 'B', floor: '2nd', owner: 'R. K. Gupta', phone: '9833004455', status: 'Occupied', dues: 'Paid', vehicle: 'KA-05-JK-9911' },
+    { flat: 'C-101', block: 'C', floor: '1st', owner: 'Ananya Roy', phone: '9822005566', status: 'Occupied', dues: 'Paid', vehicle: 'KA-03-LK-4433' },
+    { flat: 'D-301', block: 'D', floor: '3rd', owner: 'T. N. Seshan', phone: '9811998877', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-MM-5566' },
+    { flat: 'D-404', block: 'D', floor: '4th', owner: 'Vacant (For Sale)', phone: '-', status: 'Vacant', dues: 'None', vehicle: 'None' },
+  ];
+
+  const totalFlats = 48;
+  const occupiedFlats = 42;
+  const totalCollected = 156800;
+  const totalPending = 28450;
+
+  res.json({
+    society: 'Emerald Heights Residency',
+    address: 'Survey 14, Outer Ring Road, Bellandur, Bengaluru',
+    totalFlats,
+    occupiedFlats,
+    occupancyRate: '87.5%',
+    activeVisitorsInside: activeVisitors.length,
+    pendingGateRequests: pendingRequests.length,
+    openTickets: tickets.filter(t => t.status !== 'Resolved').length,
+    totalTickets: tickets.length,
+    staffOnDuty: staff.filter(s => s.status && s.status.includes('Inside')).length,
+    finance: {
+      totalCollected,
+      totalPending,
+      pendingCount: allBills.filter(b => b.status === 'Unpaid').length,
+    },
+    flats,
+    recentActivities: activities.slice(0, 10),
+    activeVisitors,
+    tickets,
+  });
+});
+
+// 10. Emergency SOS
 app.post('/api/sos', (req, res) => {
   const { type, flat } = req.body;
   const emergency = {
     id: 'sos-' + Date.now(),
     type: type || 'Security Threat',
     flat: flat || 'Flat B-402',
-    timestamp: new Date().toISOString(),
     status: 'ACTIVE_ALERT',
   };
 
-  store.emergencies.unshift(emergency);
+  DB.insertEmergency(emergency);
   broadcast('EMERGENCY_TRIGGERED', emergency);
 
   res.status(201).json({ success: true, emergency });
 });
 
-// Start listening
-server.listen(PORT, () => {
-  console.log(`[GatePass Server] Running on http://localhost:${PORT}`);
-  console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
+// 11. Developer / Admin Endpoints
+app.post('/api/dev/reset-db', (req, res) => {
+  DB.resetDatabase();
+  broadcast('INIT_STATE', {
+    pendingRequests: DB.getPendingRequests(),
+    recentActivity: DB.getActivityLogs(),
+    activeVisitors: DB.getActiveVisitors(),
+    maintenance: DB.getMaintenanceBill('B-402'),
+  });
+  res.json({ success: true, message: 'Database reset and re-seeded successfully.' });
 });
 
+// Start Server
+server.listen(PORT, () => {
+  console.log(`[GatePass Backend] Running on http://localhost:${PORT}`);
+  console.log(`[GatePass Backend] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
+  console.log(`[GatePass Backend] WebSocket listening on ws://localhost:${PORT}/ws`);
+});

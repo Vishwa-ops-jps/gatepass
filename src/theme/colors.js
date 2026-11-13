@@ -1,12 +1,12 @@
 export const colors = {
-  primary: '#0F2D6B',
-  primaryDark: '#0A1E4A',
-  primaryLight: '#1E4DB7',
-  secondary: '#FF6B00',
-  secondaryLight: '#FFA04D',
-  secondaryDark: '#D65300',
-  accentBlue: '#00A3FF',
-  background: '#F4F7FC',
+  primary: '#2563EB',
+  primaryDark: '#102A43',
+  primaryLight: '#3B82F6',
+  secondary: '#0F9D8A',
+  secondaryLight: '#5EEAD4',
+  secondaryDark: '#0F766E',
+  accentBlue: '#38BDF8',
+  background: '#F8FAFC',
   card: '#FFFFFF',
   textPrimary: '#0F172A',
   textSecondary: '#475569',
@@ -21,4 +21,3 @@ export const colors = {
   info: '#3B82F6',
   infoBg: '#EFF6FF',
 };
-

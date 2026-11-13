@@ -11,6 +11,7 @@ export default function Header({
   backendConnected,
   currentUser,
   onLogout,
+  onOpenDevTools,
 }) {
   return (
     <View style={styles.container}>
@@ -25,13 +26,20 @@ export default function Header({
         </View>
 
         <View style={styles.actionsRow}>
-          {/* Live Sync Dot */}
-          <View
-            style={[
-              styles.syncDot,
-              { backgroundColor: backendConnected ? '#10B981' : '#94A3B8' },
-            ]}
-          />
+          {/* Dev Tools Quick Pill */}
+          <TouchableOpacity
+            style={styles.devPill}
+            onPress={onOpenDevTools}
+            activeOpacity={0.7}
+          >
+            <View
+              style={[
+                styles.syncDot,
+                { backgroundColor: backendConnected ? '#10B981' : '#F59E0B' },
+              ]}
+            />
+            <Text style={styles.devPillText}>DEV</Text>
+          </TouchableOpacity>
 
           {/* Role Switcher Pill */}
           <TouchableOpacity
@@ -107,26 +115,26 @@ export default function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.primaryDark,
-    paddingTop: 12,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    paddingTop: 14,
+    paddingBottom: 14,
+    paddingHorizontal: 18,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   logoWrapper: {
-    height: 38,
-    width: 150,
+    height: 40,
+    width: 158,
     justifyContent: 'center',
   },
   logoImage: {
@@ -139,9 +147,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   syncDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  devPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  devPillText: {
+    color: '#CBD5E1',
+    fontSize: 10,
+    fontWeight: '800',
   },
   roleBadge: {
     flexDirection: 'row',
@@ -171,7 +195,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -205,7 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 6,
+    paddingTop: 9,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -231,4 +255,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

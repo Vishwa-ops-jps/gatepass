@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -24,6 +25,7 @@ export default function ResidentHome({
   onSelectPendingForCall,
 }) {
   const [poll, setPoll] = useState(communityPoll);
+  const [historyQuery, setHistoryQuery] = useState('');
 
   const handleVote = (optionId) => {
     if (poll.hasVoted) return;
@@ -47,6 +49,10 @@ export default function ResidentHome({
     });
   };
 
+  const filteredActivity = recentActivity.filter((item) =>
+    `${item.name} ${item.role} ${item.action}`.toLowerCase().includes(historyQuery.toLowerCase())
+  );
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Hero Banner with GatePass Branding */}
@@ -64,6 +70,78 @@ export default function ResidentHome({
           <Text style={styles.heroSlogan}>
             Every Entry Secure. Every Resident Safe.
           </Text>
+        </View>
+      </View>
+
+      <View style={styles.welcomeRow}>
+        <View>
+          <Text style={styles.eyebrow}>RESIDENT OVERVIEW</Text>
+          <Text style={styles.pageTitle}>Your community, at a glance</Text>
+        </View>
+        <View style={styles.secureBadge}>
+          <Ionicons name="lock-closed" size={13} color={colors.success} />
+          <Text style={styles.secureBadgeText}>Protected</Text>
+        </View>
+      </View>
+
+      <View style={styles.metricsRow}>
+        <View style={styles.metricCard}>
+          <View style={[styles.metricIcon, { backgroundColor: '#E8F1FF' }]}>
+            <Ionicons name="people" size={17} color="#2563EB" />
+          </View>
+          <Text style={styles.metricValue}>{recentActivity.length + pendingRequests.length}</Text>
+          <Text style={styles.metricLabel}>Gate activity</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <View style={[styles.metricIcon, { backgroundColor: '#E7F8F1' }]}>
+            <Ionicons name="checkmark-circle" size={17} color="#059669" />
+          </View>
+          <Text style={styles.metricValue}>98%</Text>
+          <Text style={styles.metricLabel}>Safety score</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <View style={[styles.metricIcon, { backgroundColor: '#FFF2E8' }]}>
+            <Ionicons name="wallet" size={17} color="#EA580C" />
+          </View>
+          <Text style={styles.metricValue}>₹4,250</Text>
+          <Text style={styles.metricLabel}>Dues balance</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Quick actions</Text>
+          <Text style={styles.sectionHint}>Designed for today</Text>
+        </View>
+        <View style={styles.featureRail}>
+          <TouchableOpacity style={styles.featureTile} onPress={() => onQuickAction('guest')}>
+            <View style={[styles.featureIcon, { backgroundColor: '#E8F1FF' }]}>
+              <Ionicons name="calendar" size={20} color="#2563EB" />
+            </View>
+            <Text style={styles.featureTitle}>Pre-approve</Text>
+            <Text style={styles.featureCaption}>Schedule a visit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.featureTile} onPress={() => onOpenQRModal({ name: 'Guest Pass', code: 'GP-7821', type: 'qr' })}>
+            <View style={[styles.featureIcon, { backgroundColor: '#F1ECFF' }]}>
+              <Ionicons name="qr-code" size={20} color="#7C3AED" />
+            </View>
+            <Text style={styles.featureTitle}>Share pass</Text>
+            <Text style={styles.featureCaption}>Instant QR access</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.featureTile} onPress={onOpenHelpdesk}>
+            <View style={[styles.featureIcon, { backgroundColor: '#E7F8F1' }]}>
+              <Ionicons name="card" size={20} color="#059669" />
+            </View>
+            <Text style={styles.featureTitle}>Pay dues</Text>
+            <Text style={styles.featureCaption}>₹4,250 pending</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.featureTile} onPress={onOpenSOS}>
+            <View style={[styles.featureIcon, { backgroundColor: '#FFF0F0' }]}>
+              <Ionicons name="shield" size={20} color="#DC2626" />
+            </View>
+            <Text style={styles.featureTitle}>Security</Text>
+            <Text style={styles.featureCaption}>SOS & incidents</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -335,12 +413,26 @@ export default function ResidentHome({
       {/* Recent Gate Activity Log */}
       <View style={[styles.section, { marginBottom: 30 }]}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Gate Activity</Text>
-          <Text style={styles.seeAllText}>Flat B-402 Log</Text>
+          <View>
+            <Text style={styles.sectionTitle}>Recent gate activity</Text>
+            <Text style={styles.sectionHint}>Searchable visitor history</Text>
+          </View>
+          <Text style={styles.seeAllText}>View all</Text>
+        </View>
+
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={17} color={colors.textMuted} />
+          <TextInput
+            value={historyQuery}
+            onChangeText={setHistoryQuery}
+            placeholder="Search visitors or activity"
+            placeholderTextColor={colors.textMuted}
+            style={styles.searchInput}
+          />
         </View>
 
         <View style={styles.activityList}>
-          {recentActivity.map((item) => (
+          {filteredActivity.map((item) => (
             <View key={item.id} style={styles.activityItem}>
               <View style={styles.activityIcon}>
                 <Ionicons
@@ -398,15 +490,112 @@ export default function ResidentHome({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+  },
+  welcomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  eyebrow: {
+    color: colors.primaryLight,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  pageTitle: {
+    color: colors.textPrimary,
+    fontSize: 19,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+  secureBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#E7F8F1',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  secureBadgeText: {
+    color: colors.success,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 9,
+    marginBottom: 20,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    padding: 11,
+  },
+  metricIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  metricValue: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  metricLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  featureRail: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  featureTile: {
+    flex: 1,
+    minHeight: 112,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    padding: 10,
+  },
+  featureIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  featureTitle: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  featureCaption: {
+    color: colors.textMuted,
+    fontSize: 9,
+    lineHeight: 13,
+    marginTop: 3,
   },
   heroCard: {
-    height: 140,
-    borderRadius: 18,
+    height: 158,
+    borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 20,
     backgroundColor: colors.primaryDark,
   },
   heroImage: {
@@ -419,8 +608,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 12,
-    backgroundColor: 'rgba(11, 27, 61, 0.75)',
+    padding: 16,
+    backgroundColor: 'rgba(8, 27, 58, 0.78)',
   },
   heroBadge: {
     flexDirection: 'row',
@@ -441,7 +630,7 @@ const styles = StyleSheet.create({
   },
   heroSlogan: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
   },
   pendingSection: {
@@ -449,8 +638,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FED7AA',
     borderRadius: 18,
-    padding: 14,
-    marginBottom: 16,
+    padding: 15,
+    marginBottom: 20,
   },
   pendingHeader: {
     flexDirection: 'row',
@@ -603,8 +792,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  sectionHint: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     color: colors.primaryDark,
     marginBottom: 10,
@@ -617,23 +811,23 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 11,
     justifyContent: 'space-between',
   },
   gridCard: {
-    width: '31%',
+    width: '31.5%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sosCardBorder: {
     borderColor: '#FCA5A5',
@@ -777,6 +971,23 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     padding: 12,
     gap: 12,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    borderRadius: 12,
+    height: 42,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 12,
   },
   activityItem: {
     flexDirection: 'row',

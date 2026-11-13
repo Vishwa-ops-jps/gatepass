@@ -27,8 +27,12 @@ const DEMO_GUARDS = [
   { name: 'Sunil Shinde', badgeId: 'SEC-108', gate: 'Service Gate #2', pin: '1234' },
 ];
 
+const DEMO_ADMINS = [
+  { name: 'Col. R. S. Rathore (Admin)', email: 'admin@gatepass.com', role: 'admin' },
+];
+
 export default function LoginScreen({ onLoginSuccess }) {
-  const [role, setRole] = useState('resident'); // 'resident' | 'guard'
+  const [role, setRole] = useState('resident'); // 'resident' | 'guard' | 'admin'
 
   // Resident form states
   const [phone, setPhone] = useState('9876543210');
@@ -40,6 +44,10 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [badgeId, setBadgeId] = useState('SEC-104');
   const [guardGate, setGuardGate] = useState('Main Gate #1');
   const [pin, setPin] = useState('1234');
+
+  // Admin form states
+  const [adminEmail, setAdminEmail] = useState('admin@gatepass.com');
+  const [adminPassword, setAdminPassword] = useState('admin123');
 
   const [loading, setLoading] = useState(false);
 
@@ -162,6 +170,47 @@ export default function LoginScreen({ onLoginSuccess }) {
     });
   };
 
+  // Handle Admin Submit
+  const handleAdminSubmit = async () => {
+    if (!adminEmail.trim()) {
+      Alert.alert('Required', 'Please enter admin email or ID');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiLogin({
+        role: 'admin',
+        identifier: adminEmail,
+        password: adminPassword,
+      });
+      setLoading(false);
+      if (res && res.user) {
+        onLoginSuccess(res.user);
+      }
+    } catch (err) {
+      setLoading(false);
+      onLoginSuccess({
+        id: 'admin-1',
+        name: 'Col. R. S. Rathore (Estate Admin)',
+        email: adminEmail,
+        role: 'admin',
+        badge_id: 'ADMIN-01',
+        society: 'Emerald Heights Residency',
+      });
+    }
+  };
+
+  const handleQuickAdmin = (demo) => {
+    setAdminEmail(demo.email);
+    onLoginSuccess({
+      id: 'admin-1',
+      name: demo.name,
+      email: demo.email,
+      role: 'admin',
+      society: 'Emerald Heights Residency',
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
@@ -236,6 +285,29 @@ export default function LoginScreen({ onLoginSuccess }) {
                 ]}
               >
                 Security Staff
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.roleTab,
+                role === 'admin' && styles.roleTabActiveAdmin,
+              ]}
+              onPress={() => setRole('admin')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="business"
+                size={16}
+                color={role === 'admin' ? '#FFFFFF' : '#0284C7'}
+              />
+              <Text
+                style={[
+                  styles.roleTabText,
+                  role === 'admin' && styles.roleTabTextActive,
+                ]}
+              >
+                Admin
               </Text>
             </TouchableOpacity>
           </View>
@@ -341,7 +413,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                   </View>
                 </View>
               </View>
-            ) : (
+            ) : role === 'guard' ? (
               /* Security Staff Login Form */
               <View style={styles.form}>
                 <View style={styles.formHeader}>
@@ -443,6 +515,76 @@ export default function LoginScreen({ onLoginSuccess }) {
                   </View>
                 </View>
               </View>
+            ) : (
+              /* Society Admin Login Form */
+              <View style={styles.form}>
+                <View style={styles.formHeader}>
+                  <Text style={styles.formTitle}>Society Committee Admin</Text>
+                  <Text style={styles.formSub}>
+                    Command center access for estate manager & committee
+                  </Text>
+                </View>
+
+                {/* Admin Email */}
+                <Text style={styles.label}>Admin Email / ID</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="mail-outline" size={18} color="#64748B" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="admin@gatepass.com"
+                    placeholderTextColor="#94A3B8"
+                    value={adminEmail}
+                    onChangeText={setAdminEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+
+                {/* Admin Password */}
+                <Text style={styles.label}>Admin Password</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="lock-closed-outline" size={18} color="#64748B" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="admin123"
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry
+                    value={adminPassword}
+                    onChangeText={setAdminPassword}
+                  />
+                  <Text style={styles.demoTag}>Demo: admin123</Text>
+                </View>
+
+                {/* Submit Action for Admin */}
+                <TouchableOpacity
+                  style={[styles.submitBtnGuard, { backgroundColor: '#0284C7' }]}
+                  onPress={handleAdminSubmit}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.submitBtnText}>
+                    {loading ? 'Authenticating...' : 'Access Admin Command Center'}
+                  </Text>
+                  <Ionicons name="business" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                {/* Demo Admin Login */}
+                <View style={styles.demoSection}>
+                  <Text style={styles.demoHeader}>Quick 1-Tap Demo Admin Login:</Text>
+                  <View style={styles.demoPills}>
+                    {DEMO_ADMINS.map((demo) => (
+                      <TouchableOpacity
+                        key={demo.email}
+                        style={[styles.demoPill, { borderColor: '#BAE6FD' }]}
+                        onPress={() => handleQuickAdmin(demo)}
+                      >
+                        <Ionicons name="business" size={18} color="#0284C7" />
+                        <Text style={styles.demoPillText}>{demo.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
             )}
           </View>
 
@@ -466,21 +608,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 18,
+    paddingTop: 28,
+    paddingBottom: 24,
     justifyContent: 'center',
   },
   brandHero: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   logoBox: {
-    height: 52,
-    width: 220,
+    height: 58,
+    width: 230,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   logoImg: {
     width: '100%',
@@ -490,7 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 14,
@@ -503,16 +645,16 @@ const styles = StyleSheet.create({
   },
   sloganText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
   roleSegment: {
     flexDirection: 'row',
     backgroundColor: '#071630',
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 4,
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
@@ -522,14 +664,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 10,
   },
   roleTabActiveResident: {
     backgroundColor: colors.primary,
   },
   roleTabActiveGuard: {
     backgroundColor: colors.secondary,
+  },
+  roleTabActiveAdmin: {
+    backgroundColor: '#0284C7',
   },
   roleTabText: {
     fontSize: 13,
@@ -541,14 +686,14 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 22,
+    borderRadius: 20,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 8,
-    marginBottom: 20,
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    elevation: 9,
+    marginBottom: 18,
   },
   form: {
     gap: 12,
@@ -557,14 +702,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   formTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.primaryDark,
   },
   formSub: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: 4,
   },
   label: {
     fontSize: 12,
@@ -578,9 +723,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 48,
+    height: 50,
     gap: 8,
   },
   prefixText: {
@@ -623,8 +768,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    height: 50,
-    borderRadius: 14,
+    height: 52,
+    borderRadius: 11,
     marginTop: 8,
   },
   submitBtnGuard: {
@@ -633,8 +778,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    height: 50,
-    borderRadius: 14,
+    height: 52,
+    borderRadius: 11,
     marginTop: 8,
   },
   submitBtnText: {
@@ -715,4 +860,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-

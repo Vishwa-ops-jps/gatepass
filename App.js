@@ -23,6 +23,7 @@ import IntercomCallModal from './src/components/IntercomCallModal';
 import HelpdeskModal from './src/components/HelpdeskModal';
 import VehicleFinderModal from './src/components/VehicleFinderModal';
 import LoginScreen from './src/components/LoginScreen';
+import DevToolsModal from './src/components/DevToolsModal';
 import {
   initialPendingRequests,
   initialRecentActivity,
@@ -64,6 +65,7 @@ export default function App() {
   const [intercomRequest, setIntercomRequest] = useState(null);
   const [helpdeskVisible, setHelpdeskVisible] = useState(false);
   const [vehicleFinderVisible, setVehicleFinderVisible] = useState(false);
+  const [devToolsVisible, setDevToolsVisible] = useState(false);
 
   // Connect to Backend & Realtime WebSockets on Mount
   useEffect(() => {
@@ -307,6 +309,7 @@ export default function App() {
         backendConnected={backendConnected}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onOpenDevTools={() => setDevToolsVisible(true)}
         onOpenNotifications={() => {
           Alert.alert(
             'GatePass Notifications',
@@ -502,6 +505,14 @@ export default function App() {
         vehicles={registeredVehicles}
         onClose={() => setVehicleFinderVisible(false)}
       />
+
+      {/* Full-Stack Developer Sandbox Modal */}
+      <DevToolsModal
+        visible={devToolsVisible}
+        onClose={() => setDevToolsVisible(false)}
+        backendConnected={backendConnected}
+        currentUser={currentUser}
+      />
     </SafeAreaView>
   );
 }
@@ -519,9 +530,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    borderTopColor: '#E8EDF5',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'space-around',
     shadowColor: '#000',
@@ -533,11 +544,11 @@ const styles = StyleSheet.create({
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 2,
+    paddingVertical: 3,
     flex: 1,
   },
   navText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textMuted,
     marginTop: 2,
@@ -553,9 +564,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   centerFabInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.secondary,
     justifyContent: 'center',
     alignItems: 'center',

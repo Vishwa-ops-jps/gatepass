@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GatePass™ Developer & API Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+    body { background: #0B1528; color: #E2E8F0; padding: 24px; min-height: 100vh; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #1E293B; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-title { font-size: 24px; font-weight: 900; color: #FF6B00; letter-spacing: 0.5px; }
+    .badge { background: #1E293B; color: #38BDF8; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid #334155; }
+    .badge.live { background: #064E3B; color: #34D399; border-color: #059669; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: #131F37; border: 1px solid #1E293B; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .card-title { font-size: 16px; font-weight: 800; color: #F8FAFC; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .sim-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { background: #1E293B; color: #FFFFFF; border: 1px solid #334155; padding: 12px 14px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn:hover { background: #334155; transform: translateY(-1px); }
+    .btn.primary { background: #FF6B00; border-color: #FF6B00; color: #FFFFFF; }
+    .btn.primary:hover { background: #EA580C; }
+    .btn.success { background: #059669; border-color: #059669; }
+    .btn.danger { background: #DC2626; border-color: #DC2626; }
+    .terminal { background: #050B14; border: 1px solid #1E293B; border-radius: 12px; padding: 14px; height: 260px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 18px; color: #A7F3D0; }
+    .log-line { margin-bottom: 4px; }
+    .log-line.event { color: #F59E0B; }
+    .log-line.err { color: #EF4444; }
+    .log-line.info { color: #38BDF8; }
+    .api-item { background: #0B1528; border: 1px solid #1E293B; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .method { font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 6px; }
+    .method.get { background: #0369A1; color: #E0F2FE; }
+    .method.post { background: #15803D; color: #DCFCE7; }
+    .method.put { background: #B45309; color: #FEF3C7; }
+    .endpoint { font-family: monospace; font-size: 13px; font-weight: 600; color: #E2E8F0; }
+    .quick-test-btn { background: #334155; color: #FFFFFF; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .quick-test-btn:hover { background: #475569; }
+    .preview-box { background: #050B14; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; color: #CBD5E1; max-height: 160px; overflow-y: auto; margin-top: 10px; display: none; }
+    .stats-row { display: flex; gap: 12px; margin-bottom: 20px; }
+    .stat-pill { background: #131F37; border: 1px solid #1E293B; border-radius: 10px; padding: 10px 16px; flex: 1; }
+    .stat-val { font-size: 20px; font-weight: 900; color: #F8FAFC; }
+    .stat-lbl { font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">
+      <i class="fa-solid fa-shield-halved fa-2x" style="color: #FF6B00;"></i>
+      <div>
+        <div class="brand-title">GatePass™ Full-Stack Dev Center</div>
+        <div style="font-size: 12px; color: #94A3B8;">SQLite Engine • Express REST API • Real-Time WebSockets</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span class="badge live" id="wsStatus"><i class="fa-solid fa-circle-dot"></i> WS: CONNECTED</span>
+      <span class="badge">Port: 5001</span>
+      <a href="http://localhost:8081" target="_blank" class="btn primary" style="padding: 8px 16px; text-decoration: none;">
+        <i class="fa-solid fa-mobile-screen"></i> Launch App (8081)
+      </a>
+    </div>
+  </div>
+
+  <!-- Realtime Stats -->
+  <div class="stats-row">
+    <div class="stat-pill">
+      <div class="stat-val" id="statPending">-</div>
+      <div class="stat-lbl">Pending Approvals</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-val" id="statActive" style="color: #38BDF8;">-</div>
+      <div class="stat-lbl">Active Inside Campus</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-val" id="statPasses" style="color: #34D399;">-</div>
+      <div class="stat-lbl">Digital Passes</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-val" id="statDB" style="color: #F59E0B;">SQLite WAL</div>
+      <div class="stat-lbl">Database Engine</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Simulator Panel -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa-solid fa-bolt" style="color: #F59E0B;"></i>
+        Real-Time Event Simulators (Triggers App Live)
+      </div>
+      <p style="font-size: 12px; color: #94A3B8; margin-bottom: 14px;">
+        Tap any button to broadcast a real-time event to connected mobile & web apps via WebSocket:
+      </p>
+
+      <div class="sim-buttons">
+        <button class="btn" onclick="simulateZomato()">
+          <i class="fa-solid fa-motorcycle" style="color: #EF4444;"></i> Ring Zomato Delivery
+        </button>
+        <button class="btn" onclick="simulateGuest()">
+          <i class="fa-solid fa-user-check" style="color: #38BDF8;"></i> Ring Guest (Flat B-402)
+        </button>
+        <button class="btn" onclick="simulateSOS()">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #DC2626;"></i> Fire Emergency SOS
+        </button>
+        <button class="btn" onclick="simulatePassVerify()">
+          <i class="fa-solid fa-qrcode" style="color: #10B981;"></i> Verify Pass (GP-7821)
+        </button>
+      </div>
+
+      <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #1E293B; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: #94A3B8;">Full Stack Database Control:</span>
+        <button class="btn danger" style="padding: 6px 12px; font-size: 11px;" onclick="resetDB()">
+          <i class="fa-solid fa-rotate-left"></i> Reset SQLite Seed
+        </button>
+      </div>
+    </div>
+
+    <!-- Live WebSocket Stream -->
+    <div class="card">
+      <div class="card-title" style="justify-content: space-between;">
+        <span><i class="fa-solid fa-terminal" style="color: #34D399;"></i> Live WebSocket Log Stream</span>
+        <button class="quick-test-btn" onclick="clearLogs()">Clear</button>
+      </div>
+      <div class="terminal" id="terminalLog">
+        <div class="log-line info">[System] Connected to ws://localhost:5001/ws</div>
+        <div class="log-line info">[SQLite] Connected to server/gatepass.db (WAL Mode)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Explorer -->
+  <div class="card">
+    <div class="card-title">
+      <i class="fa-solid fa-code" style="color: #38BDF8;"></i>
+      REST API Endpoints Explorer
+    </div>
+
+    <div class="api-item">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="method get">GET</span>
+        <span class="endpoint">/api/requests</span>
+        <span style="font-size: 12px; color: #64748B;">Pending visitor approvals</span>
+      </div>
+      <button class="quick-test-btn" onclick="testEndpoint('/api/requests')">Execute</button>
+    </div>
+
+    <div class="api-item">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="method get">GET</span>
+        <span class="endpoint">/api/visitors/active</span>
+        <span style="font-size: 12px; color: #64748B;">Visitors inside society campus</span>
+      </div>
+      <button class="quick-test-btn" onclick="testEndpoint('/api/visitors/active')">Execute</button>
+    </div>
+
+    <div class="api-item">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="method get">GET</span>
+        <span class="endpoint">/api/passes</span>
+        <span style="font-size: 12px; color: #64748B;">Pre-approved GatePass codes</span>
+      </div>
+      <button class="quick-test-btn" onclick="testEndpoint('/api/passes')">Execute</button>
+    </div>
+
+    <div class="api-item">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="method get">GET</span>
+        <span class="endpoint">/api/helpdesk</span>
+        <span style="font-size: 12px; color: #64748B;">Maintenance & service tickets</span>
+      </div>
+      <button class="quick-test-btn" onclick="testEndpoint('/api/helpdesk')">Execute</button>
+    </div>
+
+    <pre class="preview-box" id="apiPreview"></pre>
+  </div>
+
+  <script>
+    const term = document.getElementById('terminalLog');
+    const wsStatus = document.getElementById('wsStatus');
+
+    function log(msg, cls = '') {
+      const line = document.createElement('div');
+      line.className = 'log-line ' + cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      term.appendChild(line);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function clearLogs() {
+      term.innerHTML = '';
+    }
+
+    // Connect WebSocket
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+
+    ws.onopen = () => {
+      wsStatus.innerHTML = '<i class="fa-solid fa-circle-dot"></i> WS: CONNECTED';
+      wsStatus.className = 'badge live';
+      log('WebSocket handshake verified.', 'info');
+      refreshStats();
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        log(`WS Event: ${payload.event} -> ${JSON.stringify(payload.data || {})}`, 'event');
+        refreshStats();
+      } catch(err) {
+        log(`Raw: ${e.data}`);
+      }
+    };
+
+    ws.onclose = () => {
+      wsStatus.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> WS: DISCONNECTED';
+      wsStatus.className = 'badge';
+      log('WebSocket disconnected.', 'err');
+    };
+
+    async function refreshStats() {
+      try {
+        const [reqs, active, passes] = await Promise.all([
+          fetch('/api/requests').then(r => r.json()),
+          fetch('/api/visitors/active').then(r => r.json()),
+          fetch('/api/passes').then(r => r.json())
+        ]);
+        document.getElementById('statPending').textContent = reqs.length;
+        document.getElementById('statActive').textContent = active.length;
+        document.getElementById('statPasses').textContent = passes.length;
+      } catch(e) {}
+    }
+
+    async function simulateZomato() {
+      log('Triggering Zomato Delivery simulation...', 'info');
+      await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Zomato Food Rider',
+          phone: '+91 91234 56789',
+          type: 'Delivery',
+          category: 'delivery',
+          gate: 'Gate #2 (Service)',
+          purpose: 'Biryani Order #9910',
+          flat: 'B-402'
+        })
+      });
+    }
+
+    async function simulateGuest() {
+      log('Triggering Guest Arrival simulation...', 'info');
+      await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Dr. Alok Verma',
+          phone: '+91 98765 00000',
+          type: 'Guest',
+          category: 'guest',
+          vehicle: 'KA-03-MG-4120',
+          gate: 'Main Gate 1',
+          purpose: 'Family Visit',
+          flat: 'B-402'
+        })
+      });
+    }
+
+    async function simulateSOS() {
+      log('Triggering Emergency SOS simulation...', 'err');
+      await fetch('/api/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'Medical Emergency',
+          flat: 'Flat B-402'
+        })
+      });
+    }
+
+    async function simulatePassVerify() {
+      log('Triggering Passcode Verification (GP-7821)...', 'info');
+      await fetch('/api/passes/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'GP-7821' })
+      });
+    }
+
+    async function resetDB() {
+      if (confirm('Reset SQLite database to original fresh seed?')) {
+        await fetch('/api/dev/reset-db', { method: 'POST' });
+        log('SQLite database reset and re-seeded successfully.', 'info');
+        refreshStats();
+      }
+    }
+
+    async function testEndpoint(endpoint) {
+      const box = document.getElementById('apiPreview');
+      box.style.display = 'block';
+      box.textContent = 'Executing ' + endpoint + '...';
+      try {
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        box.textContent = JSON.stringify(data, null, 2);
+      } catch(err) {
+        box.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    refreshStats();
+  </script>
+</body>
+</html>

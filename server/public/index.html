@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>GatePass™ Enterprise | Security & Society Management Platform</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0F2D6B;
+      --primary-dark: #071533;
+      --primary-light: #1E4DB7;
+      --accent: #FF6B00;
+      --accent-hover: #EA580C;
+      --accent-light: #FFA04D;
+      --bg-dark: #070F1E;
+      --card-bg: rgba(15, 29, 58, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(24, 45, 88, 0.85);
+      --text-main: #FFFFFF;
+      --text-muted: #94A3B8;
+      --text-sub: #CBD5E1;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --info: #0284C7;
+      --sidebar-w: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
+    body { background: var(--bg-dark); color: var(--text-main); min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
+
+    /* Glassmorphic Navbar */
+    .navbar {
+      height: 64px;
+      background: rgba(7, 15, 30, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-left { display: flex; align-items: center; gap: 16px; }
+    .nav-logo { height: 38px; cursor: pointer; transition: transform 0.2s; }
+    .nav-logo:hover { transform: scale(1.02); }
+    .society-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 700;
+    }
+    .society-pill i { color: var(--accent); }
+
+    .nav-center { display: flex; align-items: center; gap: 10px; }
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 20px;
+      width: 260px;
+      transition: all 0.2s;
+    }
+    .search-bar:focus-within { border-color: var(--accent); width: 320px; background: rgba(255, 255, 255, 0.08); }
+    .search-bar input { background: transparent; border: none; outline: none; color: #FFF; font-size: 13px; width: 100%; }
+
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .view-toggle {
+      display: flex;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 3px;
+    }
+    .view-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .view-btn.active {
+      background: var(--accent);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(255, 107, 0, 0.4);
+    }
+    .ws-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+
+    /* Active User Persona Badge */
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 107, 0, 0.3);
+      padding: 5px 12px 5px 6px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .user-pill:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .user-info { display: flex; flex-direction: column; text-align: left; }
+    .user-name { font-size: 12px; font-weight: 800; color: #FFF; line-height: 1.1; }
+    .user-role-tag { font-size: 10px; color: var(--accent-light); font-weight: 700; }
+
+    /* Main Container */
+    .main-wrapper {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sidebar-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 800;
+      margin: 14px 10px 4px 10px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #FFFFFF; }
+    .nav-item.active { background: rgba(255, 107, 0, 0.15); color: var(--accent); font-weight: 700; border-left: 3px solid var(--accent); }
+    .nav-item i { width: 18px; text-align: center; }
+    .nav-item .badge-count { margin-left: auto; background: var(--accent); color: #FFF; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; }
+
+    /* Portal Content Area */
+    .portal-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+
+    /* Persona Banner */
+    .persona-banner {
+      background: linear-gradient(135deg, rgba(15, 45, 107, 0.9) 0%, rgba(7, 21, 51, 0.95) 100%);
+      border: 1px solid rgba(255, 107, 0, 0.25);
+      border-radius: 20px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .persona-title { font-size: 20px; font-weight: 900; color: #FFF; display: flex; align-items: center; gap: 10px; }
+    .persona-title i { color: var(--accent); }
+    .persona-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .persona-actions { display: flex; align-items: center; gap: 10px; }
+
+    /* KPI Stats Bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(8px);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(255, 107, 0, 0.3); }
+    .stat-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .stat-val { font-size: 24px; font-weight: 900; color: #FFF; line-height: 1.1; }
+    .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+    /* Dashboard Columns */
+    .dashboard-columns {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 20px;
+    }
+
+    /* Card Panels */
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(8px);
+    }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; }
+    .panel-title { font-size: 15px; font-weight: 800; color: #FFF; display: flex; align-items: center; gap: 10px; }
+    .panel-title i { color: var(--accent); }
+    .panel-action { font-size: 12px; color: var(--accent); font-weight: 700; cursor: pointer; text-decoration: none; }
+    .panel-action:hover { text-decoration: underline; }
+
+    /* CCTV Feeds Grid */
+    .cctv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .cctv-box {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      height: 150px;
+      background: #000;
+      border: 1px solid var(--card-border);
+    }
+    .cctv-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; filter: contrast(1.05); }
+    .cctv-overlay-top {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cctv-tag {
+      background: rgba(0, 0, 0, 0.7);
+      color: #FFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .cctv-rec {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(239, 68, 68, 0.85);
+      color: #FFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .cctv-overlay-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px 10px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      font-size: 11px;
+      color: #CBD5E1;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+
+    /* Request Cards */
+    .request-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+    .request-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 107, 0, 0.3); }
+    .request-top { display: flex; align-items: center; gap: 14px; }
+    .visitor-avatar { width: 50px; height: 50px; border-radius: 25px; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; }
+    .visitor-meta { flex: 1; min-width: 0; }
+    .visitor-name { font-size: 15px; font-weight: 800; color: #FFF; display: flex; align-items: center; gap: 8px; }
+    .visitor-tag { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+    .visitor-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .request-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* Action Buttons */
+    .btn-act {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-allow { background: var(--success); color: #FFF; }
+    .btn-allow:hover { background: #059669; }
+    .btn-deny { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .btn-deny:hover { background: var(--danger); color: #FFF; }
+    .btn-leave { background: rgba(2, 132, 199, 0.15); color: #38BDF8; border: 1px solid rgba(2, 132, 199, 0.3); }
+    .btn-leave:hover { background: var(--info); color: #FFF; }
+    .btn-primary { background: var(--accent); color: #FFF; }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* Quick Grid Actions */
+    .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .quick-tile {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quick-tile:hover {
+      background: rgba(255, 107, 0, 0.12);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .quick-tile-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .quick-tile-title { font-size: 12px; font-weight: 800; color: #FFF; }
+    .quick-tile-sub { font-size: 10px; color: var(--text-muted); }
+
+    /* Tables (Admin & Logs) */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    .data-table th { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); font-weight: 700; padding: 12px 14px; border-bottom: 1px solid var(--card-border); }
+    .data-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); color: #FFF; vertical-align: middle; }
+    .data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* Modals Backdrop & Box */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #0B1936;
+      border: 1px solid rgba(255, 107, 0, 0.3);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 500px;
+      padding: 26px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+    }
+
+    /* Auth Tab Pills */
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; background: rgba(255, 255, 255, 0.05); padding: 4px; border-radius: 14px; gap: 4px; }
+    .auth-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 6px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .auth-tab-btn i { font-size: 15px; }
+    .auth-tab-btn.active { background: var(--accent); color: #FFF; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4); }
+
+    .input-field {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: #FFF;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--accent); background: rgba(255, 255, 255, 0.09); }
+
+    .demo-pill-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .demo-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .demo-pill:hover { background: rgba(255, 107, 0, 0.2); border-color: var(--accent); color: #FFF; }
+
+    /* Mobile Device Simulator Frame */
+    .mobile-simulator-wrapper {
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 20px;
+      width: 100%;
+    }
+    .phone-screen {
+      width: 380px;
+      min-height: 740px;
+      background: #070F1E;
+      border-radius: 46px;
+      border: 10px solid #1E293B;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      width: 130px;
+      height: 22px;
+      background: #1E293B;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+      margin: 0 auto;
+    }
+    .phone-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-columns { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Glassmorphic Navigation -->
+  <header class="navbar">
+    <div class="nav-left">
+      <img src="assets/logo.png" alt="GatePass Logo" class="nav-logo" onclick="location.reload()">
+      <div class="society-pill">
+        <i class="fa-solid fa-building-shield"></i>
+        <span id="societyNameHeader">Emerald Heights Residency</span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass" style="color: #64748B;"></i>
+        <input type="text" id="globalSearch" placeholder="Search flat, visitor, vehicle... (Ctrl+K)" onkeyup="handleSearch(this.value)">
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <!-- Portal vs Mobile Simulator Toggle -->
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnViewDesktop" onclick="setViewMode('desktop')">
+          <i class="fa-solid fa-desktop"></i> Portal
+        </button>
+        <button class="view-btn" id="btnViewMobile" onclick="setViewMode('mobile')">
+          <i class="fa-solid fa-mobile-screen-button"></i> App Simulator
+        </button>
+      </div>
+
+      <!-- WebSocket Live Connection Badge -->
+      <div class="ws-badge">
+        <div class="ws-dot"></div>
+        <span id="wsStatus">LIVE SYNC</span>
+      </div>
+
+      <!-- User Role / Account Switcher Pill -->
+      <div class="user-pill" id="userPillBtn" onclick="openAuthModal()">
+        <div class="user-avatar" id="navUserAvatar">V</div>
+        <div class="user-info">
+          <div class="user-name" id="navUserName">Vishwa (Flat B-402)</div>
+          <div class="user-role-tag" id="navUserRole">Resident Owner • Tap to Switch</div>
+        </div>
+      </div>
+
+      <!-- Standalone Android APK Download Button -->
+      <a href="/GatePass.apk" download class="btn-act btn-primary" style="padding: 7px 14px; font-size: 11px; text-decoration: none;">
+        <i class="fa-solid fa-download"></i> APK
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Desktop Portal Layout -->
+  <main class="main-wrapper" id="desktopPortalView">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section-title">Portals & Views</div>
+      <a class="nav-item active" id="navMenuOverview" onclick="setPortalTab('overview')">
+        <i class="fa-solid fa-gauge-high"></i>
+        <span>Command Center</span>
+        <span class="badge-count" id="pendingCountBadge">2</span>
+      </a>
+      <a class="nav-item" id="navMenuPass" onclick="openPassModal()">
+        <i class="fa-solid fa-qrcode"></i>
+        <span>Pre-Approve Pass</span>
+      </a>
+      <a class="nav-item" id="navMenuVehicle" onclick="openVehicleModal()">
+        <i class="fa-solid fa-car"></i>
+        <span>Vehicle Lookup</span>
+      </a>
+
+      <div class="sidebar-section-title">Society Management</div>
+      <a class="nav-item" onclick="openStaffModal()">
+        <i class="fa-solid fa-user-group"></i>
+        <span>Staff & Helpers</span>
+      </a>
+      <a class="nav-item" onclick="openAmenitiesModal()">
+        <i class="fa-solid fa-dumbbell"></i>
+        <span>Clubhouse & Courts</span>
+      </a>
+      <a class="nav-item" onclick="openHelpdeskModal()">
+        <i class="fa-solid fa-wrench"></i>
+        <span>Society Helpdesk</span>
+      </a>
+      <a class="nav-item" onclick="openPayModal()">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Maintenance Dues</span>
+      </a>
+
+      <div class="sidebar-section-title">System & Security</div>
+      <a class="nav-item" onclick="openAuthModal()">
+        <i class="fa-solid fa-users-gear"></i>
+        <span>Switch Account</span>
+      </a>
+      <a class="nav-item" href="/api-docs" target="_blank">
+        <i class="fa-solid fa-code"></i>
+        <span>API Docs</span>
+      </a>
+      <a class="nav-item" onclick="triggerSOS()">
+        <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+        <span style="color: var(--danger); font-weight: 700;">Emergency SOS</span>
+      </a>
+    </aside>
+
+    <!-- Center Content -->
+    <div class="portal-content">
+      <!-- Role-Based Persona Welcome Banner -->
+      <div class="persona-banner">
+        <div>
+          <div class="persona-title" id="bannerTitle">
+            <i class="fa-solid fa-house-user"></i>
+            <span>Flat B-402 • Resident Owner Portal</span>
+          </div>
+          <div class="persona-sub" id="bannerSubtitle">
+            Welcome back, Vishwa! Manage visitor entry approvals, instant delivery passes, vehicle slots & maintenance bills.
+          </div>
+        </div>
+        <div class="persona-actions" id="bannerActions">
+          <button class="btn-act btn-primary" onclick="openPassModal('guest')">
+            <i class="fa-solid fa-plus"></i> Pre-Approve Visitor
+          </button>
+          <button class="btn-act btn-leave" onclick="openAuthModal()">
+            <i class="fa-solid fa-right-left"></i> Switch Role
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Bar -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(255, 107, 0, 0.15); color: var(--accent);">
+            <i class="fa-solid fa-bell"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statPendingApprovals">2</div>
+            <div class="stat-label" id="statLabel1">Pending Gate Approvals</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(2, 132, 199, 0.15); color: var(--info);">
+            <i class="fa-solid fa-building-user"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statInsideCampus">4</div>
+            <div class="stat-label" id="statLabel2">Inside Campus Now</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success);">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statMaintenanceStatus">Unpaid</div>
+            <div class="stat-label" id="statLabel3">Flat Maintenance Bill</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="stat-val" id="statSecurityStatus">Active</div>
+            <div class="stat-label" id="statLabel4">Security Protocol</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard 2-Column Content -->
+      <div class="dashboard-columns" id="dashboardColumns">
+        <!-- Left Column: Pending Approvals & CCTV Feeds -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Security Guard Specific Quick Actions (Shown only when role === 'guard') -->
+          <div class="panel" id="guardActionBar" style="display: none; background: rgba(255, 107, 0, 0.08); border-color: var(--accent);">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fa-solid fa-shield-halved"></i> Gate Duty Controls</div>
+              <span style="font-size: 11px; font-weight: 800; color: var(--accent);" id="guardGateLabel">Main Gate #1 Active</span>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn-act btn-primary" onclick="openWalkInModal()"><i class="fa-solid fa-user-plus"></i> Check-In Walk-In Visitor</button>
+              <button class="btn-act btn-leave" onclick="openVerifyPassModal()"><i class="fa-solid fa-qrcode"></i> Scan / Verify GatePass</button>
+              <button class="btn-act btn-deny" onclick="triggerSOS()"><i class="fa-solid fa-triangle-exclamation"></i> Gate Alarm SOS</button>
+            </div>
+          </div>
+
+          <!-- CCTV Surveillance Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="fa-solid fa-video"></i> Live Gate Surveillance Feeds
+              </div>
+              <span class="panel-action" onclick="refreshFeeds()"><i class="fa-solid fa-arrows-rotate"></i> Refresh</span>
+            </div>
+
+            <div class="cctv-grid">
+              <div class="cctv-box">
+                <img src="assets/gatepass_banner.jpg" class="cctv-img" alt="Gate 1 CCTV">
+                <div class="cctv-overlay-top">
+                  <div class="cctv-rec"><i class="fa-solid fa-circle" style="font-size: 7px;"></i> REC</div>
+                  <div class="cctv-tag">CAM 01 • MAIN GATE</div>
+                </div>
+                <div class="cctv-overlay-bottom">
+                  <span>Duty Officer: Rajesh Kumar • Vehicle & Pedestrian Lane</span>
+                </div>
+              </div>
+
+              <div class="cctv-box">
+                <img src="assets/gatepass_hero_scenery.png" class="cctv-img" alt="Gate 2 CCTV">
+                <div class="cctv-overlay-top">
+                  <div class="cctv-rec"><i class="fa-solid fa-circle" style="font-size: 7px;"></i> REC</div>
+                  <div class="cctv-tag">CAM 02 • SERVICE GATE</div>
+                </div>
+                <div class="cctv-overlay-bottom">
+                  <span>Duty Officer: Sunil Shinde • Logistics & Delivery Desk</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Approvals Priority List -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="fa-solid fa-bell"></i> <span id="pendingListTitle">Visitors Waiting for Approval</span>
+              </div>
+              <span style="font-size: 11px; background: rgba(255, 107, 0, 0.2); color: var(--accent); padding: 3px 8px; border-radius: 8px; font-weight: 800;">Real-Time Ringing</span>
+            </div>
+
+            <div id="pendingList" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamic Cards Inserted Here via JS -->
+            </div>
+          </div>
+
+          <!-- Admin Specific Flat Directory (Shown when role === 'admin') -->
+          <div class="panel" id="adminFlatsPanel" style="display: none;">
+            <div class="panel-header">
+              <div class="panel-title"><i class="fa-solid fa-building"></i> Society Flats & Resident Directory</div>
+              <span class="panel-action" onclick="loadAdminOverview()">Refresh Directory</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" id="adminFlatsTable">
+                <thead>
+                  <tr>
+                    <th>Flat #</th>
+                    <th>Resident Owner</th>
+                    <th>Contact</th>
+                    <th>Maintenance</th>
+                    <th>Vehicle Plate</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="adminFlatsTbody">
+                  <!-- Populated via loadAdminOverview() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Live Gate Activity Log Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="fa-solid fa-clock-rotate-left"></i> <span id="activityListTitle">Recent Gate Activity Stream</span>
+              </div>
+              <span class="panel-action" onclick="fetchInitialData()">Refresh</span>
+            </div>
+
+            <div id="activityStream" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Activity Items Inserted Here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Quick Actions, Maintenance Dues, Active Inside -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Quick GatePass Actions Grid -->
+          <div class="panel">
+            <div class="panel-title">
+              <i class="fa-solid fa-bolt"></i> Quick GatePass Actions
+            </div>
+
+            <div class="quick-grid">
+              <div class="quick-tile" onclick="openPassModal('guest')">
+                <div class="quick-tile-icon" style="background: rgba(37, 99, 235, 0.15); color: #3B82F6;">
+                  <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div class="quick-tile-title">Guest Pass</div>
+                <div class="quick-tile-sub">Invite Visitors</div>
+              </div>
+
+              <div class="quick-tile" onclick="openPassModal('delivery')">
+                <div class="quick-tile-icon" style="background: rgba(234, 88, 12, 0.15); color: #EA580C;">
+                  <i class="fa-solid fa-motorcycle"></i>
+                </div>
+                <div class="quick-tile-title">Delivery</div>
+                <div class="quick-tile-sub">Food & Parcels</div>
+              </div>
+
+              <div class="quick-tile" onclick="openPassModal('cab')">
+                <div class="quick-tile-icon" style="background: rgba(2, 132, 199, 0.15); color: #0284C7;">
+                  <i class="fa-solid fa-taxi"></i>
+                </div>
+                <div class="quick-tile-title">Cab Entry</div>
+                <div class="quick-tile-sub">Uber / Ola</div>
+              </div>
+
+              <div class="quick-tile" onclick="openVehicleModal()">
+                <div class="quick-tile-icon" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                  <i class="fa-solid fa-car-side"></i>
+                </div>
+                <div class="quick-tile-title">Find Car</div>
+                <div class="quick-tile-sub">Parking Bay</div>
+              </div>
+
+              <div class="quick-tile" onclick="openHelpdeskModal()">
+                <div class="quick-tile-icon" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                  <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+                <div class="quick-tile-title">Helpdesk</div>
+                <div class="quick-tile-sub">Raise Ticket</div>
+              </div>
+
+              <div class="quick-tile" onclick="triggerSOS()">
+                <div class="quick-tile-icon" style="background: rgba(239, 68, 68, 0.15); color: #EF4444;">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="quick-tile-title" style="color: #F87171;">SOS Alert</div>
+                <div class="quick-tile-sub">Emergency</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resident Maintenance Card (Specific to Logged-in Flat) -->
+          <div class="panel" id="maintenanceCardPanel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="fa-solid fa-receipt"></i> <span id="billPanelTitle">Maintenance Dues</span>
+              </div>
+              <span id="billStatusTag" style="font-size: 11px; background: rgba(239, 68, 68, 0.2); color: #EF4444; padding: 2px 8px; border-radius: 8px; font-weight: 800;">Unpaid</span>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.04); padding: 14px; border-radius: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 13px; color: var(--text-muted);" id="billMonthLabel">November 2026 Society Bill</div>
+                <div style="font-size: 20px; font-weight: 900; color: #FFF;" id="billAmountVal">₹4,250</div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-sub);" id="billDueNotice">Includes Security, 24/7 Water, Generator Backup & Clubhouse.</div>
+              <button class="btn-act btn-primary" id="btnPayBill" style="justify-content: center; padding: 10px; margin-top: 4px;" onclick="payMaintenanceBill()">
+                <i class="fa-solid fa-shield-heart"></i> Pay ₹4,250 via UPI / Card
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Visitors Inside Campus -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="fa-solid fa-building-circle-check"></i> Inside Campus Tracker
+              </div>
+              <span id="activeCountBadge" style="font-size: 11px; background: rgba(2, 132, 199, 0.2); color: var(--info); padding: 2px 8px; border-radius: 8px; font-weight: 800;">4 Visitors</span>
+            </div>
+
+            <div id="activeVisitorsList" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Active visitor items -->
+            </div>
+          </div>
+
+          <!-- Society Community Poll -->
+          <div class="panel">
+            <div class="panel-title">
+              <i class="fa-solid fa-chart-pie"></i> Society Poll
+            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #FFF; line-height: 1.4;">
+              Should the society install EV Fast Chargers in Basement 2?
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+              <div style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; cursor: pointer;" onclick="votePoll(this)">
+                <span>⚡ Yes, urgently needed</span>
+                <span style="color: var(--accent); font-weight: 800;">69%</span>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; cursor: pointer;" onclick="votePoll(this)">
+                <span>🔌 Normal 15A points</span>
+                <span style="color: var(--text-muted); font-weight: 800;">23%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Simulator View (Device Frame) -->
+  <div class="mobile-simulator-wrapper" id="mobileSimulatorView">
+    <div class="phone-screen">
+      <div class="phone-notch"></div>
+      <div class="phone-body">
+        <!-- Phone Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="assets/icon.png" style="width: 28px; height: 28px; border-radius: 6px;">
+            <div>
+              <div style="font-size: 13px; font-weight: 900; color: #FFF;">GatePass Mobile</div>
+              <div style="font-size: 10px; color: var(--accent);" id="phoneFlatLabel">Flat B-402 • Vishwa</div>
+            </div>
+          </div>
+          <div class="role-badge" onclick="openAuthModal()" style="padding: 4px 10px; font-size: 11px; cursor: pointer;">
+            <span id="phoneRoleTag">Resident</span>
+          </div>
+        </div>
+
+        <!-- Phone Waiting at Gate Ringing Card -->
+        <div id="phonePendingSection" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+        <!-- Phone Quick Actions Grid -->
+        <div style="font-size: 12px; font-weight: 800; color: #FFF;">Quick Approvals</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+          <div style="background: rgba(255, 255, 255, 0.04); padding: 10px 4px; border-radius: 12px; cursor: pointer;" onclick="openPassModal('guest')">
+            <i class="fa-solid fa-user-plus" style="color: #3B82F6; font-size: 16px;"></i>
+            <div style="font-size: 10px; margin-top: 4px; font-weight: 700;">Guest</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.04); padding: 10px 4px; border-radius: 12px; cursor: pointer;" onclick="openPassModal('delivery')">
+            <i class="fa-solid fa-motorcycle" style="color: #EA580C; font-size: 16px;"></i>
+            <div style="font-size: 10px; margin-top: 4px; font-weight: 700;">Delivery</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.04); padding: 10px 4px; border-radius: 12px; cursor: pointer;" onclick="openPassModal('cab')">
+            <i class="fa-solid fa-taxi" style="color: #0284C7; font-size: 16px;"></i>
+            <div style="font-size: 10px; margin-top: 4px; font-weight: 700;">Cab</div>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.04); padding: 10px 4px; border-radius: 12px; cursor: pointer;" onclick="openPayModal()">
+            <i class="fa-solid fa-receipt" style="color: #10B981; font-size: 16px;"></i>
+            <div style="font-size: 10px; margin-top: 4px; font-weight: 700;">Dues</div>
+          </div>
+        </div>
+
+        <!-- Phone Activity Stream -->
+        <div style="font-size: 12px; font-weight: 800; color: #FFF; margin-top: 4px;">Gate Logs</div>
+        <div id="phoneActivityList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. MULTI-ROLE AUTHENTICATION MODAL -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-shield-halved" style="color: var(--accent);"></i>
+          <span>GatePass™ Authentication</span>
+        </div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px; color: var(--text-muted);" onclick="closeModal('authModal')"></i>
+      </div>
+
+      <!-- Tab Buttons for the 3 Personas -->
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tabBtnResident" onclick="switchAuthTab('resident')">
+          <i class="fa-solid fa-house-user"></i>
+          <span>Resident Owner</span>
+        </button>
+        <button class="auth-tab-btn" id="tabBtnGuard" onclick="switchAuthTab('guard')">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Security Guard</span>
+        </button>
+        <button class="auth-tab-btn" id="tabBtnAdmin" onclick="switchAuthTab('admin')">
+          <i class="fa-solid fa-user-tie"></i>
+          <span>Society Admin</span>
+        </button>
+      </div>
+
+      <!-- Form 1: Resident Owner (Requires Flat No + Phone No) -->
+      <div id="formResident" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+          Enter your <strong>Flat Number</strong> and registered <strong>Phone Number</strong> to view all your flat's visitors, delivery passes, parking bays & dues.
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Flat Number</label>
+          <input type="text" id="loginFlat" placeholder="e.g. B-402 or A-104" value="B-402" class="input-field" style="text-transform: uppercase;">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Mobile Phone Number</label>
+          <input type="text" id="loginPhone" placeholder="e.g. 9876543210" value="9876543210" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Quick Demo Residents (Tap to Fill):</label>
+          <div class="demo-pill-group">
+            <span class="demo-pill" onclick="fillResident('B-402', '9876543210')">Flat B-402: Vishwa</span>
+            <span class="demo-pill" onclick="fillResident('A-104', '9811122233')">Flat A-104: Pooja</span>
+            <span class="demo-pill" onclick="fillResident('C-201', '9822233445')">Flat C-201: Dr. Alok</span>
+          </div>
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px; font-size: 14px;" onclick="submitResidentLogin()">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Login as Resident Owner
+        </button>
+      </div>
+
+      <!-- Form 2: Security Guard -->
+      <div id="formGuard" style="display: none; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+          Guard duty terminal authentication. Log entries, scan QR passes, and verify visitors at society gates.
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Badge ID or Guard Phone</label>
+          <input type="text" id="loginBadge" placeholder="e.g. SEC-104" value="SEC-104" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Assigned Gate Duty</label>
+          <select id="loginGate" class="input-field" style="background: #071533;">
+            <option value="Main Gate #1">Main Gate #1 (Vehicle & Pedestrian Lane)</option>
+            <option value="Service Gate #2">Service Gate #2 (Logistics & Deliveries)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">4-Digit Security PIN</label>
+          <input type="password" id="loginPin" placeholder="e.g. 1234" value="1234" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Quick Demo Guards (Tap to Fill):</label>
+          <div class="demo-pill-group">
+            <span class="demo-pill" onclick="fillGuard('SEC-104', 'Main Gate #1', '1234')">Officer Rajesh (Gate 1)</span>
+            <span class="demo-pill" onclick="fillGuard('SEC-108', 'Service Gate #2', '1234')">Officer Sunil (Gate 2)</span>
+          </div>
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px; font-size: 14px;" onclick="submitGuardLogin()">
+          <i class="fa-solid fa-shield-halved"></i> Authorize Gate Terminal
+        </button>
+      </div>
+
+      <!-- Form 3: Society Admin -->
+      <div id="formAdmin" style="display: none; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+          Society management committee access. Monitor all 48 flats, financial collections, guard logs & facility complaints.
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Admin Email or Staff ID</label>
+          <input type="text" id="loginAdminEmail" placeholder="e.g. admin@gatepass.com" value="admin@gatepass.com" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Password</label>
+          <input type="password" id="loginAdminPassword" placeholder="e.g. admin123" value="admin123" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Demo Admin Credentials:</label>
+          <div class="demo-pill-group">
+            <span class="demo-pill" onclick="fillAdmin('admin@gatepass.com', 'admin123')">Col. Rathore (admin@gatepass.com)</span>
+          </div>
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px; font-size: 14px;" onclick="submitAdminLogin()">
+          <i class="fa-solid fa-user-shield"></i> Open Admin Command Center
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. GUARD WALK-IN VISITOR CHECK-IN MODAL -->
+  <div class="modal-backdrop" id="walkInModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF;">Check-In Walk-In Visitor</div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('walkInModal')"></i>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor Full Name</label>
+          <input type="text" id="walkInName" placeholder="e.g. Rajesh Sharma" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Target Flat Number (Receiving Resident)</label>
+          <input type="text" id="walkInFlat" placeholder="e.g. B-402, A-104" value="B-402" class="input-field" style="text-transform: uppercase;">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor Phone Number</label>
+          <input type="text" id="walkInPhone" placeholder="+91 98000 12345" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor Category</label>
+          <select id="walkInCategory" class="input-field" style="background: #071533;">
+            <option value="guest">Guest / Personal Visitor</option>
+            <option value="delivery">Delivery Courier (Zomato/Swiggy/Amazon)</option>
+            <option value="cab">Cab / Taxi Pickup (Uber/Ola)</option>
+            <option value="service">Home Service / Technician</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Vehicle Plate Number (Optional)</label>
+          <input type="text" id="walkInVehicle" placeholder="e.g. KA-03-MG-4120" class="input-field">
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px; font-size: 14px;" onclick="submitWalkInCheckIn()">
+          <i class="fa-solid fa-phone-volume"></i> Send Ringing Alert to Resident
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. GUARD VERIFY PASSCODE / QR CODE MODAL -->
+  <div class="modal-backdrop" id="verifyPassModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF;">Verify Digital GatePass</div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('verifyPassModal')"></i>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted);">
+          Enter the 6-character visitor passcode (e.g. <strong>GP-7821</strong>) or scan their digital QR pass.
+        </div>
+        <input type="text" id="verifyPassInput" placeholder="e.g. GP-7821" value="GP-7821" class="input-field" style="text-transform: uppercase; font-size: 18px; letter-spacing: 1px; text-align: center;">
+        <button class="btn-act btn-allow" style="justify-content: center; padding: 13px;" onclick="submitVerifyPass()">
+          <i class="fa-solid fa-circle-check"></i> Verify & Grant Entry
+        </button>
+        <div id="verifyPassResult" style="display: none; padding: 12px; border-radius: 12px; font-size: 13px; text-align: center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. REAL-TIME INTERCOM VIDEO CALL MODAL -->
+  <div class="modal-backdrop" id="intercomModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11px; font-weight: 800; background: rgba(239, 68, 68, 0.2); color: #F87171; padding: 4px 10px; border-radius: 12px;">
+          <i class="fa-solid fa-phone-volume"></i> INCOMING GATE CALL
+        </span>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('intercomModal')"></i>
+      </div>
+
+      <div style="width: 100%; height: 220px; border-radius: 16px; overflow: hidden; position: relative; background: #000; margin-top: 4px;">
+        <img id="intercomVisitorImg" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80" style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; color: #FFF;">
+          <span style="color: #EF4444;">●</span> GATE 01 CAM • LIVE
+        </div>
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); text-align: left;">
+          <div style="font-size: 16px; font-weight: 900; color: #FFF;" id="intercomVisitorName">Rahul Sharma</div>
+          <div style="font-size: 12px; color: var(--text-sub);" id="intercomVisitorPurpose">Visiting Flat B-402</div>
+        </div>
+      </div>
+
+      <button class="btn-act btn-leave" style="width: 100%; justify-content: center; padding: 12px;" onclick="toggleIntercomMic(this)">
+        <i class="fa-solid fa-microphone"></i> <span>Tap to Speak with Gate Guard</span>
+      </button>
+
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 4px;">
+        <button class="btn-act btn-deny" style="flex: 1; justify-content: center; padding: 12px;" onclick="resolveIntercom('deny')">
+          <i class="fa-solid fa-xmark"></i> Deny
+        </button>
+        <button class="btn-act btn-leave" style="flex: 1; justify-content: center; padding: 12px;" id="intercomLeaveBtn" onclick="resolveIntercom('leave')">
+          <i class="fa-solid fa-box"></i> Leave at Gate
+        </button>
+        <button class="btn-act btn-allow" style="flex: 1.2; justify-content: center; padding: 12px;" onclick="resolveIntercom('allow')">
+          <i class="fa-solid fa-check"></i> Allow Entry
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. PRE-APPROVE PASS MODAL -->
+  <div class="modal-backdrop" id="passModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF;">Generate Digital GatePass</div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('passModal')"></i>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor / Service Partner Name</label>
+          <input type="text" id="passName" placeholder="e.g. Priyanshu Sharma or Swiggy" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Destination Flat</label>
+          <input type="text" id="passFlat" value="B-402" class="input-field" style="text-transform: uppercase;">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor Phone (Optional)</label>
+          <input type="text" id="passPhone" placeholder="e.g. 9876543210" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Category</label>
+          <select id="passType" class="input-field" style="background: #071533;">
+            <option value="guest">Guest / Personal Visitor</option>
+            <option value="delivery">Delivery Partner (Swiggy/Zomato/Amazon)</option>
+            <option value="cab">Cab / Taxi (Uber/Ola)</option>
+            <option value="service">Daily Staff / Service</option>
+          </select>
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px;" onclick="createPass()">
+          <i class="fa-solid fa-qrcode"></i> Generate Pass & Passcode
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. VEHICLE LOOKUP MODAL -->
+  <div class="modal-backdrop" id="vehicleModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF;">Vehicle & Parking Lookup</div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('vehicleModal')"></i>
+      </div>
+      <input type="text" placeholder="Type vehicle plate (e.g. 4120, Creta, KA-05)..." id="vehicleSearchInput" onkeyup="searchVehicle(this.value)" class="input-field">
+      <div id="vehicleResultsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+  </div>
+
+  <!-- 7. HELPDESK COMPLAINTS MODAL -->
+  <div class="modal-backdrop" id="helpdeskModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 900; color: #FFF;">Society Helpdesk Tickets</div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('helpdeskModal')"></i>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="ticketTitle" placeholder="Complaint title (e.g. Water leakage, Corridor light)..." class="input-field">
+        <select id="ticketCategory" class="input-field" style="background: #071533;">
+          <option value="Electrical">Electrical</option>
+          <option value="Plumbing">Plumbing</option>
+          <option value="Housekeeping">Housekeeping</option>
+          <option value="Lift">Lift & Common Areas</option>
+          <option value="Security">Security & Parking</option>
+        </select>
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 12px;" onclick="submitTicket()">
+          <i class="fa-solid fa-paper-plane"></i> Submit Ticket
+        </button>
+      </div>
+      <div style="font-size: 13px; font-weight: 800; color: #FFF; margin-top: 6px;">Active Society Tickets</div>
+      <div id="ticketsContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- ==================== CLIENT JAVASCRIPT ==================== -->
+  <script>
+    // Current Authenticated User State
+    let currentUser = {
+      role: 'resident', // 'resident' | 'guard' | 'admin'
+      name: 'Vishwa (Resident Owner)',
+      flat: 'B-402',
+      phone: '9876543210',
+      badge_id: null,
+      gate: null,
+      society: 'Emerald Heights Residency'
+    };
+
+    let pendingRequests = [];
+    let recentActivity = [];
+    let activeVisitors = [];
+    let currentIntercomReq = null;
+
+    const vehicles = [
+      { plate: 'KA-05-MM-9214', type: 'Honda City', flat: 'B-402', slot: 'Basement B-2 #42', tag: 'GP-FAST-7721' },
+      { plate: 'KA-01-EE-3312', type: 'Ather 450X', flat: 'B-402', slot: 'Two-Wheeler Bay #18', tag: 'GP-FAST-9021' },
+      { plate: 'KA-03-MG-4120', type: 'Hyundai Creta', flat: 'A-104', slot: 'Basement A-1 #12', tag: 'GP-FAST-1244' },
+      { plate: 'KA-51-AB-8800', type: 'Kia Seltos', flat: 'C-201', slot: 'Basement C-2 #08', tag: 'GP-FAST-6611' }
+    ];
+
+    // WebSocket Connection
+    const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProto}//${location.host}/ws`);
+
+    ws.onopen = () => {
+      document.getElementById('wsStatus').textContent = 'LIVE SYNC';
+      fetchInitialData();
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const { event, data } = JSON.parse(e.data);
+        handleWsEvent(event, data);
+      } catch(err) {}
+    };
+
+    function handleWsEvent(event, data) {
+      if (event === 'INIT_STATE') {
+        fetchInitialData();
+      } else if (event === 'REQUEST_CREATED') {
+        // Only ring intercom if resident of that flat or guard
+        if (currentUser.role === 'guard' || currentUser.role === 'admin' || (currentUser.role === 'resident' && data.flat === currentUser.flat)) {
+          pendingRequests.unshift(data);
+          renderAll();
+          if (currentUser.role === 'resident' && data.flat === currentUser.flat) {
+            openIntercom(data);
+          }
+        }
+      } else if (event === 'REQUEST_RESOLVED') {
+        pendingRequests = pendingRequests.filter(r => r.id !== data.requestId);
+        if (data.activity) recentActivity.unshift(data.activity);
+        if (data.activeVisitor) activeVisitors.unshift(data.activeVisitor);
+        renderAll();
+        closeModal('intercomModal');
+      } else if (event === 'VISITOR_CHECKED_OUT') {
+        activeVisitors = activeVisitors.filter(v => v.id !== data.visitorId);
+        if (data.activity) recentActivity.unshift(data.activity);
+        renderAll();
+      } else if (event === 'BILL_PAID') {
+        if (data.flat === currentUser.flat) {
+          document.getElementById('statMaintenanceStatus').textContent = 'Paid';
+          document.getElementById('billStatusTag').textContent = 'Paid';
+          document.getElementById('billStatusTag').style.background = 'rgba(16, 185, 129, 0.2)';
+          document.getElementById('billStatusTag').style.color = '#10B981';
+          document.getElementById('btnPayBill').innerHTML = '<i class="fa-solid fa-circle-check"></i> Bill Paid (Txn: ' + data.txnId + ')';
+          document.getElementById('btnPayBill').style.background = 'rgba(16, 185, 129, 0.2)';
+          document.getElementById('btnPayBill').style.color = '#34D399';
+          document.getElementById('btnPayBill').disabled = true;
+        }
+      } else if (event === 'EMERGENCY_TRIGGERED') {
+        alert('🚨 SECURITY EMERGENCY BROADCAST!\n' + data.type + ' reported at ' + data.flat);
+      }
+    }
+
+    // Load initial data filtered by current persona
+    async function fetchInitialData() {
+      try {
+        const flatParam = currentUser.role === 'resident' ? `?flat=${encodeURIComponent(currentUser.flat)}` : '';
+        const [reqs, act, inside, bill] = await Promise.all([
+          fetch(`/api/requests${flatParam}`).then(r => r.json()),
+          fetch(`/api/activity${flatParam}`).then(r => r.json()),
+          fetch(`/api/visitors/active${flatParam}`).then(r => r.json()),
+          currentUser.role === 'resident' ? fetch(`/api/maintenance?flat=${encodeURIComponent(currentUser.flat)}`).then(r => r.json()) : Promise.resolve(null)
+        ]);
+
+        pendingRequests = reqs || [];
+        recentActivity = act || [];
+        activeVisitors = inside || [];
+
+        if (bill && currentUser.role === 'resident') {
+          updateMaintenanceDisplay(bill);
+        }
+
+        if (currentUser.role === 'admin') {
+          loadAdminOverview();
+        }
+
+        renderAll();
+      } catch(e) {}
+    }
+
+    function updateMaintenanceDisplay(bill) {
+      const isPaid = bill.status === 'Paid';
+      document.getElementById('statMaintenanceStatus').textContent = isPaid ? 'Paid' : 'Unpaid';
+      document.getElementById('billStatusTag').textContent = bill.status;
+      document.getElementById('billMonthLabel').textContent = `${bill.month} Maintenance • Flat ${currentUser.flat}`;
+      document.getElementById('billAmountVal').textContent = '₹' + (bill.amount || 4250).toLocaleString();
+
+      if (isPaid) {
+        document.getElementById('billStatusTag').style.background = 'rgba(16, 185, 129, 0.2)';
+        document.getElementById('billStatusTag').style.color = '#10B981';
+        document.getElementById('btnPayBill').innerHTML = '<i class="fa-solid fa-circle-check"></i> Paid Online';
+        document.getElementById('btnPayBill').style.background = 'rgba(16, 185, 129, 0.2)';
+        document.getElementById('btnPayBill').style.color = '#34D399';
+        document.getElementById('btnPayBill').disabled = true;
+      } else {
+        document.getElementById('billStatusTag').style.background = 'rgba(239, 68, 68, 0.2)';
+        document.getElementById('billStatusTag').style.color = '#EF4444';
+        document.getElementById('btnPayBill').innerHTML = `<i class="fa-solid fa-shield-heart"></i> Pay ₹${bill.amount || 4250} via UPI`;
+        document.getElementById('btnPayBill').style.background = 'var(--accent)';
+        document.getElementById('btnPayBill').style.color = '#FFF';
+        document.getElementById('btnPayBill').disabled = false;
+      }
+    }
+
+    function renderAll() {
+      // Stats Bar Updates
+      document.getElementById('statPendingApprovals').textContent = pendingRequests.length;
+      document.getElementById('pendingCountBadge').textContent = pendingRequests.length;
+      document.getElementById('statInsideCampus').textContent = activeVisitors.length;
+      document.getElementById('activeCountBadge').textContent = activeVisitors.length + ' Visitors';
+
+      // Pending Requests List
+      const pList = document.getElementById('pendingList');
+      if (pendingRequests.length === 0) {
+        pList.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 12px;">
+          <i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 20px; margin-bottom: 6px; display: block;"></i>
+          No visitors currently waiting for Flat ${currentUser.role === 'resident' ? currentUser.flat : 'entry'}.
+        </div>`;
+      } else {
+        pList.innerHTML = pendingRequests.map(r => `
+          <div class="request-card">
+            <div class="request-top">
+              <img src="${r.image || 'assets/icon.png'}" class="visitor-avatar">
+              <div class="visitor-meta">
+                <div class="visitor-name">
+                  ${r.name}
+                  <span class="visitor-tag" style="background: ${r.category === 'delivery' ? 'rgba(234, 88, 12, 0.2); color: #EA580C;' : 'rgba(37, 99, 235, 0.2); color: #3B82F6;'}">${r.type}</span>
+                  <span style="font-size: 11px; color: var(--accent); font-weight: 800; margin-left: auto;">Flat ${r.flat}</span>
+                </div>
+                <div class="visitor-desc">${r.purpose} • ${r.gate} ${r.vehicle ? '• ' + r.vehicle : ''}</div>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="btn-act btn-leave" onclick='openIntercom(${JSON.stringify(r)})'><i class="fa-solid fa-video"></i> Intercom</button>
+              <button class="btn-act btn-deny" onclick="resolveReq('${r.id}', 'deny')"><i class="fa-solid fa-xmark"></i> Deny</button>
+              ${r.category === 'delivery' ? `<button class="btn-act btn-leave" onclick="resolveReq('${r.id}', 'leave')"><i class="fa-solid fa-box"></i> Leave at Gate</button>` : ''}
+              <button class="btn-act btn-allow" onclick="resolveReq('${r.id}', 'allow')"><i class="fa-solid fa-check"></i> Allow Entry</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Phone Pending Section
+      const phoneP = document.getElementById('phonePendingSection');
+      if (pendingRequests.length > 0) {
+        phoneP.innerHTML = `
+          <div style="background: rgba(255, 107, 0, 0.15); border: 1px solid var(--accent); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 11px; font-weight: 800; color: var(--accent); display: flex; justify-content: space-between;">
+              <span><i class="fa-solid fa-phone-volume"></i> WAITING AT GATE</span>
+              <span>Flat ${pendingRequests[0].flat}</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <img src="${pendingRequests[0].image || 'assets/icon.png'}" style="width: 40px; height: 40px; border-radius: 20px; object-fit: cover;">
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: 800; color: #FFF;">${pendingRequests[0].name}</div>
+                <div style="font-size: 11px; color: var(--text-sub);">${pendingRequests[0].purpose}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 4px;">
+              <button class="btn-act btn-deny" style="padding: 6px 10px; font-size: 11px;" onclick="resolveReq('${pendingRequests[0].id}', 'deny')">Deny</button>
+              <button class="btn-act btn-allow" style="padding: 6px 14px; font-size: 11px;" onclick="resolveReq('${pendingRequests[0].id}', 'allow')">Allow</button>
+            </div>
+          </div>
+        `;
+      } else {
+        phoneP.innerHTML = `<div style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 10px;">No pending visitors at gate.</div>`;
+      }
+
+      // Activity Stream
+      const actContainer = document.getElementById('activityStream');
+      const phoneAct = document.getElementById('phoneActivityList');
+      const actHtml = recentActivity.slice(0, 5).map(a => `
+        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 12px; font-size: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid ${a.category === 'delivery' ? 'fa-motorcycle' : a.category === 'cab' ? 'fa-taxi' : 'fa-user'}" style="color: var(--accent);"></i>
+            <div>
+              <div style="font-weight: 800; color: #FFF;">${a.name} <span style="font-size: 10px; color: var(--accent);">${a.flat ? '• Flat ' + a.flat : ''}</span></div>
+              <div style="color: var(--text-muted); font-size: 11px;">${a.role} • ${a.gate}</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span style="color: ${a.status === 'approved' ? 'var(--success)' : 'var(--text-muted)'}; font-weight: 800;">${a.action}</span>
+            <div style="font-size: 10px; color: var(--text-muted);">${a.timestamp}</div>
+          </div>
+        </div>
+      `).join('');
+      actContainer.innerHTML = actHtml || '<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 16px;">No activity logged yet.</div>';
+      phoneAct.innerHTML = actHtml || '<div style="color: var(--text-muted); font-size: 11px; text-align: center;">No logs yet.</div>';
+
+      // Active Visitors Inside
+      const activeList = document.getElementById('activeVisitorsList');
+      if (activeVisitors.length === 0) {
+        activeList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 14px;">No visitors currently inside campus.</div>';
+      } else {
+        activeList.innerHTML = activeVisitors.map(v => `
+          <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.03); padding: 10px 12px; border-radius: 12px;">
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #FFF;">${v.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Visiting ${v.flat || 'B-402'} • In since ${v.in_time ? new Date(v.in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '10:30 AM'}</div>
+            </div>
+            <button class="btn-act btn-deny" style="padding: 5px 10px; font-size: 11px;" onclick="checkoutVisitor('${v.id}')">Check Out</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Role-Based UI Customization
+    function applyPersonaUI() {
+      const { role, name, flat, gate } = currentUser;
+
+      // Top Navbar User Pill
+      document.getElementById('navUserAvatar').textContent = name ? name[0].toUpperCase() : 'U';
+      if (role === 'resident') {
+        document.getElementById('navUserName').textContent = `${name || 'Owner'} (${flat})`;
+        document.getElementById('navUserRole').textContent = `Resident Owner • Tap to Switch`;
+        document.getElementById('phoneRoleTag').textContent = `Resident ${flat}`;
+        document.getElementById('phoneFlatLabel').textContent = `Flat ${flat} • ${name}`;
+      } else if (role === 'guard') {
+        document.getElementById('navUserName').textContent = `${name || 'Duty Officer'}`;
+        document.getElementById('navUserRole').textContent = `Gate Security (${gate || 'Gate 1'}) • Switch`;
+        document.getElementById('phoneRoleTag').textContent = `Guard Desk`;
+        document.getElementById('phoneFlatLabel').textContent = `${gate || 'Main Gate 1'} Duty`;
+      } else {
+        document.getElementById('navUserName').textContent = `${name || 'Admin'}`;
+        document.getElementById('navUserRole').textContent = `Society Committee Admin • Switch`;
+        document.getElementById('phoneRoleTag').textContent = `Admin`;
+        document.getElementById('phoneFlatLabel').textContent = `Emerald Heights Admin`;
+      }
+
+      // Persona Banner
+      if (role === 'resident') {
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-house-user"></i> <span>Flat ${flat} • Resident Owner Portal</span>`;
+        document.getElementById('bannerSubtitle').textContent = `Welcome back, ${name}! Manage visitor approvals, instant delivery passes, vehicle slots & maintenance bills for Flat ${flat}.`;
+        document.getElementById('guardActionBar').style.display = 'none';
+        document.getElementById('adminFlatsPanel').style.display = 'none';
+        document.getElementById('maintenanceCardPanel').style.display = 'flex';
+        document.getElementById('statLabel1').textContent = `Pending Approvals (Flat ${flat})`;
+        document.getElementById('statLabel3').textContent = `Flat ${flat} Maintenance`;
+        document.getElementById('passFlat').value = flat;
+      } else if (role === 'guard') {
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-shield-halved"></i> <span>Security Gate Terminal • ${gate || 'Main Gate #1'}</span>`;
+        document.getElementById('bannerSubtitle').textContent = `Duty Officer: ${name} (Badge: ${currentUser.badge_id || 'SEC-104'}). Verify QR passes, log walk-in visitors, and manage CCTV surveillance.`;
+        document.getElementById('guardActionBar').style.display = 'flex';
+        document.getElementById('adminFlatsPanel').style.display = 'none';
+        document.getElementById('maintenanceCardPanel').style.display = 'none';
+        document.getElementById('statLabel1').textContent = `Visitors at Gates`;
+        document.getElementById('statLabel3').textContent = `Gate Status: Operational`;
+      } else {
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-user-tie"></i> <span>Society Management Committee Command Center</span>`;
+        document.getElementById('bannerSubtitle').textContent = `Estate Administrator: ${name}. Real-time monitoring across 48 flats, financial collections, guard logs & facility complaints.`;
+        document.getElementById('guardActionBar').style.display = 'none';
+        document.getElementById('adminFlatsPanel').style.display = 'flex';
+        document.getElementById('maintenanceCardPanel').style.display = 'none';
+        document.getElementById('statLabel1').textContent = `Pending Gate Requests`;
+        document.getElementById('statLabel3').textContent = `Total Dues: ₹28,450`;
+      }
+
+      fetchInitialData();
+    }
+
+    // AUTHENTICATION TAB SWITCHING & SUBMISSIONS
+    function openAuthModal() {
+      openModal('authModal');
+    }
+
+    function switchAuthTab(tab) {
+      document.getElementById('tabBtnResident').classList.remove('active');
+      document.getElementById('tabBtnGuard').classList.remove('active');
+      document.getElementById('tabBtnAdmin').classList.remove('active');
+
+      document.getElementById('formResident').style.display = 'none';
+      document.getElementById('formGuard').style.display = 'none';
+      document.getElementById('formAdmin').style.display = 'none';
+
+      if (tab === 'resident') {
+        document.getElementById('tabBtnResident').classList.add('active');
+        document.getElementById('formResident').style.display = 'flex';
+      } else if (tab === 'guard') {
+        document.getElementById('tabBtnGuard').classList.add('active');
+        document.getElementById('formGuard').style.display = 'flex';
+      } else {
+        document.getElementById('tabBtnAdmin').classList.add('active');
+        document.getElementById('formAdmin').style.display = 'flex';
+      }
+    }
+
+    function fillResident(flat, phone) {
+      document.getElementById('loginFlat').value = flat;
+      document.getElementById('loginPhone').value = phone;
+    }
+
+    function fillGuard(badge, gate, pin) {
+      document.getElementById('loginBadge').value = badge;
+      document.getElementById('loginGate').value = gate;
+      document.getElementById('loginPin').value = pin;
+    }
+
+    function fillAdmin(email, pwd) {
+      document.getElementById('loginAdminEmail').value = email;
+      document.getElementById('loginAdminPassword').value = pwd;
+    }
+
+    // Submit Resident Login (Requires Flat No + Phone No)
+    async function submitResidentLogin() {
+      const flat = document.getElementById('loginFlat').value.trim().toUpperCase();
+      const phone = document.getElementById('loginPhone').value.trim();
+
+      if (!flat || !phone) {
+        return alert('Please enter both Flat Number (e.g. B-402) and Phone Number.');
+      }
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'resident', flat, phone, identifier: phone })
+        }).then(r => r.json());
+
+        if (res.success && res.user) {
+          currentUser = res.user;
+          closeModal('authModal');
+          applyPersonaUI();
+        } else {
+          alert(res.error || 'Login failed. Please check your credentials.');
+        }
+      } catch (err) {
+        alert('Could not authenticate. Please try again.');
+      }
+    }
+
+    // Submit Security Guard Login
+    async function submitGuardLogin() {
+      const badgeId = document.getElementById('loginBadge').value.trim();
+      const gate = document.getElementById('loginGate').value;
+      const pin = document.getElementById('loginPin').value.trim();
+
+      if (!badgeId) return alert('Please enter Guard Badge ID or Phone');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'guard', identifier: badgeId, pinOrOtp: pin, gate })
+        }).then(r => r.json());
+
+        if (res.success && res.user) {
+          currentUser = res.user;
+          closeModal('authModal');
+          applyPersonaUI();
+        } else {
+          alert(res.error || 'Guard authentication failed.');
+        }
+      } catch (err) {
+        alert('Could not authenticate guard.');
+      }
+    }
+
+    // Submit Society Admin Login
+    async function submitAdminLogin() {
+      const email = document.getElementById('loginAdminEmail').value.trim();
+      const password = document.getElementById('loginAdminPassword').value.trim();
+
+      if (!email) return alert('Please enter Admin Email or ID');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'admin', identifier: email, password })
+        }).then(r => r.json());
+
+        if (res.success && res.user) {
+          currentUser = res.user;
+          closeModal('authModal');
+          applyPersonaUI();
+        } else {
+          alert(res.error || 'Admin login failed.');
+        }
+      } catch (err) {
+        alert('Could not authenticate admin.');
+      }
+    }
+
+    // Load Admin Overview Data
+    async function loadAdminOverview() {
+      try {
+        const data = await fetch('/api/admin/overview').then(r => r.json());
+        if (data.flats) {
+          const tbody = document.getElementById('adminFlatsTbody');
+          tbody.innerHTML = data.flats.map(f => `
+            <tr>
+              <td><strong style="color: var(--accent);">${f.flat}</strong> (Block ${f.block})</td>
+              <td>${f.owner}</td>
+              <td style="color: var(--text-muted);">${f.phone}</td>
+              <td>
+                <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: ${f.dues === 'Paid' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(239, 68, 68, 0.2); color: #F87171;'}">${f.dues}</span>
+              </td>
+              <td style="color: #F59E0B; font-weight: 700;">${f.vehicle}</td>
+              <td><span style="color: ${f.status === 'Occupied' ? '#34D399' : '#94A3B8'}; font-weight: 700;">${f.status}</span></td>
+            </tr>
+          `).join('');
+        }
+      } catch(e) {}
+    }
+
+    // Guard Walk-In Visitor Registration
+    function openWalkInModal() {
+      openModal('walkInModal');
+    }
+
+    async function submitWalkInCheckIn() {
+      const name = document.getElementById('walkInName').value.trim();
+      const flat = document.getElementById('walkInFlat').value.trim().toUpperCase();
+      const phone = document.getElementById('walkInPhone').value.trim();
+      const category = document.getElementById('walkInCategory').value;
+      const vehicle = document.getElementById('walkInVehicle').value.trim();
+
+      if (!name || !flat) return alert('Please enter visitor name and target flat number.');
+
+      const typeMap = { guest: 'Guest', delivery: 'Delivery Partner', cab: 'Cab Driver', service: 'Service Staff' };
+
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          flat,
+          phone: phone || '+91 98000 00000',
+          type: typeMap[category] || 'Guest',
+          category,
+          vehicle: vehicle || null,
+          gate: currentUser.gate || 'Main Gate 1',
+          purpose: `Visiting Flat ${flat}`
+        })
+      }).then(r => r.json());
+
+      closeModal('walkInModal');
+      document.getElementById('walkInName').value = '';
+      alert(`Walk-In Visitor Registered! ✅\nRinging alert sent to resident of Flat ${flat}.`);
+    }
+
+    // Guard Verify GatePass Code
+    function openVerifyPassModal() {
+      document.getElementById('verifyPassResult').style.display = 'none';
+      openModal('verifyPassModal');
+    }
+
+    async function submitVerifyPass() {
+      const code = document.getElementById('verifyPassInput').value.trim().toUpperCase();
+      if (!code) return alert('Enter passcode');
+
+      const resBox = document.getElementById('verifyPassResult');
+      try {
+        const res = await fetch('/api/passes/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        }).then(r => r.json());
+
+        if (res.valid) {
+          resBox.style.display = 'block';
+          resBox.style.background = 'rgba(16, 185, 129, 0.2)';
+          resBox.style.color = '#34D399';
+          resBox.innerHTML = `<strong>PASS VERIFIED ✅</strong><br>${res.message}`;
+          setTimeout(() => { closeModal('verifyPassModal'); fetchInitialData(); }, 1400);
+        } else {
+          resBox.style.display = 'block';
+          resBox.style.background = 'rgba(239, 68, 68, 0.2)';
+          resBox.style.color = '#F87171';
+          resBox.textContent = res.message || 'Passcode is invalid or expired.';
+        }
+      } catch(err) {
+        alert('Verification error. Please retry.');
+      }
+    }
+
+    // Resolve visitor request (Approve / Deny / Leave at Gate)
+    async function resolveReq(id, action) {
+      if (action === 'deny') {
+        await fetch(`/api/requests/${id}/deny`, { method: 'PUT' });
+      } else {
+        await fetch(`/api/requests/${id}/approve`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leaveAtGate: action === 'leave' })
+        });
+      }
+    }
+
+    async function checkoutVisitor(id) {
+      await fetch(`/api/visitors/${id}/checkout`, { method: 'PUT' });
+    }
+
+    function openIntercom(req) {
+      currentIntercomReq = req;
+      document.getElementById('intercomVisitorName').textContent = req.name;
+      document.getElementById('intercomVisitorPurpose').textContent = req.purpose + ' • ' + req.gate;
+      if (req.image) document.getElementById('intercomVisitorImg').src = req.image;
+      document.getElementById('intercomLeaveBtn').style.display = req.category === 'delivery' ? 'flex' : 'none';
+      openModal('intercomModal');
+    }
+
+    function resolveIntercom(action) {
+      if (!currentIntercomReq) return;
+      resolveReq(currentIntercomReq.id, action);
+      closeModal('intercomModal');
+    }
+
+    function toggleIntercomMic(btn) {
+      if (btn.classList.contains('active-mic')) {
+        btn.classList.remove('active-mic');
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> <span>Tap to Speak with Gate Guard</span>';
+        btn.style.background = 'rgba(2, 132, 199, 0.15)';
+      } else {
+        btn.classList.add('active-mic');
+        btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> <span>Speaking with Guard (Active)</span>';
+        btn.style.background = '#0284C7';
+        btn.style.color = '#FFF';
+      }
+    }
+
+    // Resident Pre-Approve Pass
+    async function createPass() {
+      const name = document.getElementById('passName').value.trim();
+      const flat = (document.getElementById('passFlat').value || currentUser.flat || 'B-402').trim().toUpperCase();
+      const phone = document.getElementById('passPhone').value.trim();
+      const type = document.getElementById('passType').value;
+
+      if (!name) return alert('Please enter visitor name');
+
+      const res = await fetch('/api/passes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, flat, phone, type })
+      }).then(r => r.json());
+
+      closeModal('passModal');
+      document.getElementById('passName').value = '';
+      alert(`Digital GatePass Created! ✅\nPasscode: ${res.pass.code}\nShow this code or QR code at Gate 1 for Flat ${flat}.`);
+    }
+
+    // Pay Maintenance Bill for current flat
+    async function payMaintenanceBill() {
+      const flat = currentUser.flat || 'B-402';
+      const res = await fetch('/api/maintenance/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flat })
+      }).then(r => r.json());
+
+      if (res.success) {
+        alert(`Payment Successful! 🎉\nReceipt Txn ID: ${res.receipt.txnId}\nFlat: ${flat}\nAmount: ₹4,250`);
+      }
+    }
+
+    // Vehicle Search
+    function searchVehicle(val) {
+      const q = val.toLowerCase().trim();
+      const list = document.getElementById('vehicleResultsList');
+      if (!q) { list.innerHTML = ''; return; }
+      const res = vehicles.filter(v => v.plate.toLowerCase().includes(q) || v.type.toLowerCase().includes(q) || v.flat.toLowerCase().includes(q));
+      if (res.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 10px;">No registered vehicle found for that search.</div>';
+        return;
+      }
+      list.innerHTML = res.map(v => `
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 800; color: #F59E0B; font-size: 14px;">${v.plate}</div>
+            <div style="font-size: 12px; color: #FFF; font-weight: 700;">${v.type} • Flat ${v.flat}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">${v.slot} • Tag: ${v.tag}</div>
+          </div>
+          <button class="btn-act btn-leave" style="padding: 6px 10px; font-size: 11px;" onclick="alert('Nudge notification sent to Flat ${v.flat} to move car!')">Nudge Owner</button>
+        </div>
+      `).join('');
+    }
+
+    // Helpdesk Tickets
+    async function submitTicket() {
+      const title = document.getElementById('ticketTitle').value.trim();
+      const category = document.getElementById('ticketCategory').value;
+      if (!title) return alert('Enter ticket title');
+
+      await fetch('/api/helpdesk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, category, flat: currentUser.flat || 'B-402' })
+      });
+      document.getElementById('ticketTitle').value = '';
+      loadTickets();
+      alert('Helpdesk complaint submitted to society facility manager!');
+    }
+
+    async function loadTickets() {
+      const flatParam = currentUser.role === 'resident' ? `?flat=${encodeURIComponent(currentUser.flat)}` : '';
+      const tickets = await fetch(`/api/helpdesk${flatParam}`).then(r => r.json());
+      document.getElementById('ticketsContainer').innerHTML = tickets.map(t => `
+        <div style="background: rgba(255,255,255,0.04); padding: 10px 12px; border-radius: 10px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 800; color: #FFF;">${t.title} <span style="font-size: 10px; color: var(--accent);">(Flat ${t.flat})</span></div>
+            <div style="color: var(--text-muted); font-size: 11px;">${t.category} • ${t.assigned_to || 'Assigned'}</div>
+          </div>
+          <span style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: ${t.status === 'Resolved' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(245, 158, 11, 0.2); color: #FBBF24;'}">${t.status}</span>
+        </div>
+      `).join('');
+    }
+
+    async function triggerSOS() {
+      if (confirm(`Broadcast EMERGENCY SOS alert from ${currentUser.role === 'resident' ? 'Flat ' + currentUser.flat : 'Gate Terminal'}?`)) {
+        await fetch('/api/sos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'Security Threat', flat: currentUser.role === 'resident' ? 'Flat ' + currentUser.flat : 'Gate Terminal #1' })
+        });
+      }
+    }
+
+    // View Mode Toggle (Desktop Portal ↔ Mobile App Simulator)
+    function setViewMode(mode) {
+      if (mode === 'mobile') {
+        document.getElementById('desktopPortalView').style.display = 'none';
+        document.getElementById('mobileSimulatorView').style.display = 'flex';
+        document.getElementById('btnViewMobile').classList.add('active');
+        document.getElementById('btnViewDesktop').classList.remove('active');
+      } else {
+        document.getElementById('desktopPortalView').style.display = 'flex';
+        document.getElementById('mobileSimulatorView').style.display = 'none';
+        document.getElementById('btnViewDesktop').classList.add('active');
+        document.getElementById('btnViewMobile').classList.remove('active');
+      }
+    }
+
+    // Modal Helpers
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openPassModal(type) {
+      if (type) document.getElementById('passType').value = type;
+      document.getElementById('passFlat').value = currentUser.flat || 'B-402';
+      openModal('passModal');
+    }
+    function openVehicleModal() { openModal('vehicleModal'); }
+    function openHelpdeskModal() { loadTickets(); openModal('helpdeskModal'); }
+    function openStaffModal() { alert('Verified Society Staff On Duty:\n• Sunita Devi (Housekeeping • Inside Society)\n• Ramesh Patel (Driver & Car Cleaner • Inside Society)\n• Mohammad Farooq (Facility Electrician • On Duty)\n• Anjali Rawat (Cook • Expected 06:00 PM)'); }
+    function openAmenitiesModal() { alert('Clubhouse & Amenities:\n• Olympic Swimming Pool: Open Today (06:00 AM - 09:00 PM)\n• Fitness & Cardio Gym: Open Today (Free for Residents)\n• Floodlit Tennis Court: Slots Open\n• Clubhouse Banquet Hall: Available for Booking'); }
+    function openPayModal() {
+      if (currentUser.role === 'resident') {
+        payMaintenanceBill();
+      } else {
+        alert('Maintenance portal is available in Resident Owner mode. Switch account to view dues.');
+      }
+    }
+    function refreshFeeds() { alert('Surveillance feeds re-calibrated. Both Gate 1 and Gate 2 cameras stream active.'); }
+    function votePoll(el) { alert('Your vote has been recorded on the society blockchain ledger!'); }
+    function handleSearch(q) {
+      if (!q) return;
+      if (q.length > 2) {
+        openVehicleModal();
+        document.getElementById('vehicleSearchInput').value = q;
+        searchVehicle(q);
+      }
+    }
+
+    // Initialize UI on startup
+    applyPersonaUI();
+  </script>
+</body>
+</html>
