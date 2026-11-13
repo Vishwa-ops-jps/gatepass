@@ -2,9 +2,14 @@
   "name": "gatepass",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
-    "start": "expo start",
+    "start": "node server/index.js",
+    "build": "npm --prefix server install",
     "server": "node server/index.js",
+    "expo": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"

@@ -532,9 +532,9 @@ app.post('/api/dev/reset-db', (req, res) => {
   res.json({ success: true, message: 'Database reset and re-seeded successfully.' });
 });
 
-// Start Server
-server.listen(PORT, () => {
-  console.log(`[GatePass Backend] Running on http://localhost:${PORT}`);
-  console.log(`[GatePass Backend] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
-  console.log(`[GatePass Backend] WebSocket listening on ws://localhost:${PORT}/ws`);
+// Start Server (0.0.0.0 binds to all network interfaces for Render & cloud deployment)
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[GatePass Server] Running on http://0.0.0.0:${PORT} (Production/Render Ready)`);
+  console.log(`[GatePass Server] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
+  console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
 });

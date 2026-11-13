@@ -125,6 +125,26 @@ npx expo start
 
 ---
 
+## ☁️ Deploy to Render (1-Click Cloud Deployment)
+
+This repository includes a [`render.yaml`](render.yaml) blueprint configured to deploy both the frontend portal and the backend API on [Render](https://render.com).
+
+### Step-by-Step Render Deployment:
+1. Go to **[https://dashboard.render.com](https://dashboard.render.com)**.
+2. Click **New +** → **Web Service**.
+3. Select **Build and deploy from a Git repository**.
+4. Connect your GitHub repository: `https://github.com/Vishwa-ops-jps/gatepass`.
+5. Render auto-detects the settings from `render.yaml`:
+   - **Name**: `gatepass`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm start`
+   - **Environment Variables**: `NODE_VERSION=22.12.0`
+6. Click **Deploy Web Service**!
+7. Once deployed, Render will provide a live public URL (e.g., `https://gatepass.onrender.com`), serving the full Web Portal, REST API, and WebSocket server globally!
+
+---
+
 ## 📱 Mobile App (Standalone APK)
 
 The standalone Android build is included in the root directory as [`GatePass.apk`](GatePass.apk).
