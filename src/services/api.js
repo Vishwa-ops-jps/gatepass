@@ -4,8 +4,10 @@ import { Platform } from 'react-native';
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const PORT = '5001';
 
-export const API_BASE_URL = `http://${DEFAULT_HOST}:${PORT}/api`;
-export const WS_BASE_URL = `ws://${DEFAULT_HOST}:${PORT}/ws`;
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:${PORT}/api`;
+export const WS_BASE_URL =
+  process.env.EXPO_PUBLIC_WS_URL || `ws://${DEFAULT_HOST}:${PORT}/ws`;
 
 let socket = null;
 const eventListeners = new Set();
@@ -172,4 +174,3 @@ export async function apiTriggerSOS(type) {
     body: JSON.stringify({ type, flat: 'Flat B-402' }),
   });
 }
-

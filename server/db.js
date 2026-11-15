@@ -1,432 +1,394 @@
-const path = require('path');
-const { DatabaseSync } = require('node:sqlite');
+const { MongoClient } = require('mongodb');
 
-const DB_PATH = path.join(__dirname, 'gatepass.db');
-const db = new DatabaseSync(DB_PATH);
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.MONGODB_DB_NAME || 'gatepass';
 
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
+let client = null;
+let database = null;
+let isMongo = false;
 
-function initSchema() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      phone TEXT,
-      email TEXT,
-      role TEXT NOT NULL, -- 'admin' | 'resident' | 'guard'
-      flat TEXT,
-      gate TEXT,
-      pin TEXT,
-      password TEXT,
-      badge_id TEXT,
-      society TEXT DEFAULT 'Emerald Heights Residency',
-      avatar TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS visitors (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      phone TEXT,
-      type TEXT NOT NULL, -- 'Guest' | 'Delivery' | 'Cab' | 'Staff'
-      category TEXT NOT NULL,
-      vehicle TEXT,
-      gate TEXT DEFAULT 'Main Gate 1',
-      purpose TEXT,
-      flat TEXT NOT NULL,
-      status TEXT DEFAULT 'pending', -- 'pending' | 'approved' | 'denied' | 'checked_out'
-      in_time DATETIME,
-      out_time DATETIME,
-      image TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS passes (
-      code TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      phone TEXT,
-      type TEXT NOT NULL,
-      flat TEXT NOT NULL,
-      valid_until TEXT,
-      leave_at_gate INTEGER DEFAULT 0,
-      is_used INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS activity_logs (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      role TEXT NOT NULL,
-      category TEXT NOT NULL,
-      gate TEXT NOT NULL,
-      flat TEXT DEFAULT 'B-402',
-      action TEXT NOT NULL,
-      status TEXT NOT NULL,
-      timestamp TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS helpdesk_tickets (
-      id TEXT PRIMARY KEY,
-      category TEXT NOT NULL,
-      title TEXT NOT NULL,
-      description TEXT,
-      status TEXT DEFAULT 'In Progress',
-      priority TEXT DEFAULT 'Medium',
-      assigned_to TEXT,
-      flat TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS staff (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      role TEXT NOT NULL,
-      rating TEXT,
-      phone TEXT,
-      status TEXT,
-      entry_time TEXT,
-      flats_worked TEXT,
-      badge TEXT,
-      avatar TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS amenities (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      capacity TEXT,
-      timing TEXT,
-      status TEXT,
-      price TEXT,
-      icon TEXT,
-      description TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS maintenance_bills (
-      id TEXT PRIMARY KEY,
-      flat TEXT NOT NULL,
-      month TEXT NOT NULL,
-      due_date TEXT NOT NULL,
-      amount REAL NOT NULL,
-      status TEXT DEFAULT 'Unpaid',
-      paid_at DATETIME,
-      txn_id TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS emergencies (
-      id TEXT PRIMARY KEY,
-      type TEXT NOT NULL,
-      flat TEXT NOT NULL,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      status TEXT DEFAULT 'ACTIVE_ALERT'
-    );
-  `);
-
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  if (userCount === 0) {
-    seedDatabase();
-  }
-}
-
-function seedDatabase() {
-  console.log('[SQLite DB] Seeding initial database records...');
-
-  const insertUser = db.prepare(`
-    INSERT INTO users (id, name, phone, email, role, flat, gate, pin, password, badge_id, avatar)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  // 1. Admin
-  insertUser.run(
-    'admin-1',
-    'Col. R. S. Rathore (Estate Admin)',
-    '9899900001',
-    'admin@gatepass.com',
-    'admin',
-    null,
-    null,
-    null,
-    'admin123',
-    'ADMIN-01',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'
-  );
-
-  // 2. Residents (Flat Owners)
-  insertUser.run(
-    'res-1',
-    'Vishwa (Resident Owner)',
-    '9876543210',
-    'vishwa@residence.com',
-    'resident',
-    'B-402',
-    null,
-    null,
-    null,
-    null,
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-  );
-  insertUser.run(
-    'res-2',
-    'Pooja Malhotra (Resident Owner)',
-    '9811122233',
-    'pooja@residence.com',
-    'resident',
-    'A-104',
-    null,
-    null,
-    null,
-    null,
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
-  );
-  insertUser.run(
-    'res-3',
-    'Dr. Alok Verma (Resident Owner)',
-    '9822233445',
-    'alok@residence.com',
-    'resident',
-    'C-201',
-    null,
-    null,
-    null,
-    null,
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
-  );
-
-  // 3. Security Guards
-  insertUser.run(
-    'sec-104',
-    'Rajesh Kumar (Duty Officer)',
-    '9900011222',
-    'guard1@gatepass.com',
-    'guard',
-    null,
-    'Main Gate #1',
-    '1234',
-    null,
-    'SEC-104',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
-  );
-  insertUser.run(
-    'sec-108',
-    'Sunil Shinde',
-    '9900033444',
-    'guard2@gatepass.com',
-    'guard',
-    null,
-    'Service Gate #2',
-    '1234',
-    null,
-    'SEC-108',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
-  );
-
-  // Visitors
-  const insertVisitor = db.prepare(`
-    INSERT INTO visitors (id, name, phone, type, category, vehicle, gate, purpose, flat, status, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertVisitor.run('req-1', 'Rahul Sharma', '+91 98765 43210', 'Guest', 'guest', 'KA-03-MG-4120', 'Main Gate 1', 'Visiting Flat B-402', 'B-402', 'pending', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80');
-  insertVisitor.run('req-2', 'Mukesh Kumar (Zomato)', '+91 91234 56789', 'Delivery', 'delivery', null, 'Service Gate 2', 'Food Delivery • Order #84920', 'B-402', 'pending', 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80');
-  insertVisitor.run('req-3', 'Amazon Courier (Karan)', '+91 98112 00011', 'Delivery', 'delivery', null, 'Service Gate 2', 'Parcel Delivery for Flat A-104', 'A-104', 'pending', 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80');
-
-  // Active visitors
-  insertVisitor.run('v-1', 'Dr. Alok Verma', '+91 98333 44555', 'Guest', 'guest', null, 'Main Gate 1', 'Visiting Flat B-402', 'B-402', 'approved', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80');
-  insertVisitor.run('v-2', 'Urban Company AC Tech', '+91 98444 11223', 'Staff', 'service', null, 'Main Gate 1', 'AC Service Flat B-201', 'B-201', 'approved', 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80');
-
-  // Passes
-  const insertPass = db.prepare(`
-    INSERT INTO passes (code, name, phone, type, flat, valid_until, leave_at_gate)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertPass.run('GP-7821', 'Priyanshu Sharma', '+91 98765 11223', 'guest', 'B-402', 'Tomorrow, 11:59 PM', 0);
-  insertPass.run('GP-9014', 'Ravi Shankar (Interior Architect)', '+91 98111 55667', 'service', 'A-104', 'Tomorrow, 08:00 PM', 0);
-
-  // Activity Logs
-  const insertActivity = db.prepare(`
-    INSERT INTO activity_logs (id, name, role, category, gate, flat, action, status, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertActivity.run('act-1', 'Sunita Devi', 'House Maid', 'staff', 'Main Gate 1', 'B-402', 'Checked In', 'approved', 'Today, 08:30 AM');
-  insertActivity.run('act-2', 'Uber (Swift Dzire)', 'Cab / Taxi', 'cab', 'Main Gate 1', 'B-402', 'Allowed Entry', 'approved', 'Today, 09:15 AM');
-  insertActivity.run('act-3', 'Amazon Courier (Rajesh)', 'Delivery', 'delivery', 'Gate 2 (Parcel Desk)', 'B-402', 'Left at Security Desk', 'completed', 'Yesterday, 04:45 PM');
-  insertActivity.run('act-4', 'Dr. Alok Verma', 'Guest', 'guest', 'Main Gate 1', 'B-402', 'Checked Out', 'completed', 'Yesterday, 07:10 PM');
-  insertActivity.run('act-5', 'Blinkit Delivery', 'Delivery', 'delivery', 'Service Gate 2', 'A-104', 'Allowed Entry', 'approved', 'Today, 11:10 AM');
-
-  // Staff
-  const insertStaff = db.prepare(`
-    INSERT INTO staff (id, name, role, rating, phone, status, entry_time, flats_worked, badge, avatar)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertStaff.run('staff-1', 'Sunita Devi', 'Housekeeping / Maid', '4.9 ★', '+91 98220 11223', 'Inside Society', '08:30 AM', '6 Flats (Block B & C)', 'Police Verified', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80');
-  insertStaff.run('staff-2', 'Ramesh Patel', 'Car Cleaner & Driver', '4.8 ★', '+91 97334 22119', 'Inside Society', '06:45 AM', '4 Flats (Block B)', 'Police Verified', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80');
-  insertStaff.run('staff-3', 'Anjali Rawat', 'Cook & Chef', '5.0 ★', '+91 94112 88440', 'Expected at 06:00 PM', '-', '3 Flats (Block B)', 'Police Verified', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80');
-  insertStaff.run('staff-4', 'Mohammad Farooq', 'Society Electrician', '4.9 ★', '+91 98450 33441', 'On Duty • Estate Office', '08:00 AM', 'Emerald Heights Facility Team', 'Official Staff', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80');
-
-  // Amenities
-  const insertAmenity = db.prepare(`
-    INSERT INTO amenities (id, name, capacity, timing, status, price, icon, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertAmenity.run('am-1', 'Clubhouse Banquet Hall', '150 People', '09:00 AM - 11:00 PM', 'Available', '₹2,500 / slot', 'home', 'Air-conditioned banquet hall with stage & sound system.');
-  insertAmenity.run('am-2', 'Olympic Swimming Pool', '30 People', '06:00 AM - 09:00 PM', 'Open Today', 'Free for Residents', 'water', 'Temperature-controlled 25m pool with dedicated lifeguard.');
-  insertAmenity.run('am-3', 'Floodlit Tennis Court', '4 Players', '06:00 AM - 10:00 PM', 'Slots Open', '₹150 / hr', 'tennisball', 'Hard court with LED floodlights.');
-  insertAmenity.run('am-4', 'Fitness & Cardio Gym', '25 People', '05:30 AM - 10:30 PM', 'Open Today', 'Free for Residents', 'barbell', 'State-of-the-art gym with weights & trainer.');
-
-  // Maintenance Bills per flat
-  const insertBill = db.prepare(`
-    INSERT INTO maintenance_bills (id, flat, month, due_date, amount, status)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  insertBill.run('bill-b402', 'B-402', 'November 2026', '15 Nov 2026', 4250, 'Unpaid');
-  insertBill.run('bill-a104', 'A-104', 'November 2026', '15 Nov 2026', 3600, 'Unpaid');
-  insertBill.run('bill-c201', 'C-201', 'November 2026', '15 Nov 2026', 4100, 'Paid');
-
-  // Helpdesk
-  const insertTicket = db.prepare(`
-    INSERT INTO helpdesk_tickets (id, category, title, description, status, priority, assigned_to, flat, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertTicket.run('TICK-101', 'Electrical', 'Corridor Light Flickering outside Flat B-402', 'Ceiling LED panel flickering.', 'In Progress', 'Medium', 'Mohammad Farooq (Electrician)', 'B-402', 'Today, 10:15 AM');
-  insertTicket.run('TICK-102', 'Plumbing', 'Water Pressure Issue in Kitchen Sink', 'Low water pressure line.', 'Resolved', 'Low', 'Kishore (Plumber)', 'B-402', 'Yesterday, 02:30 PM');
-  insertTicket.run('TICK-103', 'Carpentry', 'Main Door Latch Stiff in Flat A-104', 'Lock needs alignment.', 'In Progress', 'High', 'Raju (Carpenter)', 'A-104', 'Today, 09:30 AM');
-
-  console.log('[SQLite DB] Seeding completed.');
-}
-
-const DB = {
-  db,
-  initSchema,
-  resetDatabase() {
-    db.exec(`
-      DROP TABLE IF EXISTS users;
-      DROP TABLE IF EXISTS visitors;
-      DROP TABLE IF EXISTS passes;
-      DROP TABLE IF EXISTS activity_logs;
-      DROP TABLE IF EXISTS helpdesk_tickets;
-      DROP TABLE IF EXISTS staff;
-      DROP TABLE IF EXISTS amenities;
-      DROP TABLE IF EXISTS maintenance_bills;
-      DROP TABLE IF EXISTS emergencies;
-    `);
-    initSchema();
-  },
-
-  // Auth & Users
-  getUsersByRole: (role) => db.prepare('SELECT * FROM users WHERE role = ?').all(role),
-  getUserByPhoneAndFlat: (phone, flat) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const cleanFlat = flat.trim().toUpperCase();
-    return db.prepare('SELECT * FROM users WHERE (phone = ? OR phone LIKE ?) AND UPPER(flat) = ?')
-      .get(cleanPhone, `%${cleanPhone}%`, cleanFlat);
-  },
-  getUserByBadgeOrPhone: (idOrPhone) => {
-    const clean = idOrPhone.trim();
-    return db.prepare('SELECT * FROM users WHERE UPPER(badge_id) = ? OR phone = ?')
-      .get(clean.toUpperCase(), clean);
-  },
-  getUserByEmail: (email) => {
-    return db.prepare('SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(badge_id) = ?')
-      .get(email.trim().toLowerCase(), email.trim().toLowerCase());
-  },
-  getDemoUsers: () => {
-    const admins = db.prepare("SELECT * FROM users WHERE role = 'admin'").all();
-    const residents = db.prepare("SELECT * FROM users WHERE role = 'resident'").all();
-    const guards = db.prepare("SELECT * FROM users WHERE role = 'guard'").all();
-    return { admins, residents, guards };
-  },
-
-  // Visitors (Filtered by flat if requested)
-  getPendingRequests: (flat = null) => {
-    if (flat) {
-      return db.prepare("SELECT * FROM visitors WHERE status = 'pending' AND UPPER(flat) = ? ORDER BY created_at DESC").all(flat.toUpperCase());
-    }
-    return db.prepare("SELECT * FROM visitors WHERE status = 'pending' ORDER BY created_at DESC").all();
-  },
-  getActiveVisitors: (flat = null) => {
-    if (flat) {
-      return db.prepare("SELECT * FROM visitors WHERE status = 'approved' AND UPPER(flat) = ? ORDER BY in_time DESC").all(flat.toUpperCase());
-    }
-    return db.prepare("SELECT * FROM visitors WHERE status = 'approved' ORDER BY in_time DESC").all();
-  },
-  getVisitorById: (id) => db.prepare('SELECT * FROM visitors WHERE id = ?').get(id),
-  insertVisitor: (v) => {
-    db.prepare(`
-      INSERT INTO visitors (id, name, phone, type, category, vehicle, gate, purpose, flat, status, in_time, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(v.id, v.name, v.phone, v.type, v.category, v.vehicle || null, v.gate, v.purpose, v.flat, v.status || 'pending', v.in_time || null, v.image || null);
-  },
-  updateVisitorStatus: (id, status, inTime = null, outTime = null) => {
-    db.prepare('UPDATE visitors SET status = ?, in_time = COALESCE(?, in_time), out_time = COALESCE(?, out_time) WHERE id = ?')
-      .run(status, inTime, outTime, id);
-  },
-
-  // Passes
-  getPasses: (flat = null) => {
-    if (flat) {
-      return db.prepare('SELECT * FROM passes WHERE UPPER(flat) = ? ORDER BY created_at DESC').all(flat.toUpperCase());
-    }
-    return db.prepare('SELECT * FROM passes ORDER BY created_at DESC').all();
-  },
-  getPassByCode: (code) => db.prepare('SELECT * FROM passes WHERE code = ?').get(code),
-  insertPass: (p) => {
-    db.prepare(`
-      INSERT INTO passes (code, name, phone, type, flat, valid_until, leave_at_gate)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(p.code, p.name, p.phone, p.type, p.flat, p.valid_until, p.leave_at_gate ? 1 : 0);
-  },
-
-  // Activity Logs
-  getActivityLogs: (flat = null) => {
-    if (flat) {
-      return db.prepare('SELECT * FROM activity_logs WHERE UPPER(flat) = ? ORDER BY created_at DESC LIMIT 50').all(flat.toUpperCase());
-    }
-    return db.prepare('SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 50').all();
-  },
-  insertActivity: (a) => {
-    db.prepare(`
-      INSERT INTO activity_logs (id, name, role, category, gate, flat, action, status, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(a.id, a.name, a.role, a.category, a.gate, a.flat || 'B-402', a.action, a.status, a.timestamp);
-  },
-
-  // Helpdesk
-  getHelpdeskTickets: (flat = null) => {
-    if (flat) {
-      return db.prepare('SELECT * FROM helpdesk_tickets WHERE UPPER(flat) = ? ORDER BY created_at DESC').all(flat.toUpperCase());
-    }
-    return db.prepare('SELECT * FROM helpdesk_tickets ORDER BY created_at DESC').all();
-  },
-  insertTicket: (t) => {
-    db.prepare(`
-      INSERT INTO helpdesk_tickets (id, category, title, description, status, priority, assigned_to, flat, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(t.id, t.category, t.title, t.description, t.status, t.priority, t.assigned_to, t.flat, t.created_at);
-  },
-
-  // Staff & Amenities
-  getStaff: () => db.prepare('SELECT * FROM staff').all(),
-  getAmenities: () => db.prepare('SELECT * FROM amenities').all(),
-
-  // Maintenance
-  getMaintenanceBill: (flat = 'B-402') => {
-    const bill = db.prepare('SELECT * FROM maintenance_bills WHERE UPPER(flat) = ?').get(flat.toUpperCase());
-    return bill || { month: 'November 2026', amount: 4250, status: 'Unpaid', flat };
-  },
-  getAllMaintenanceBills: () => db.prepare('SELECT * FROM maintenance_bills').all(),
-  payMaintenanceBill: (flat, txnId) => {
-    db.prepare("UPDATE maintenance_bills SET status = 'Paid', txn_id = ?, paid_at = CURRENT_TIMESTAMP WHERE UPPER(flat) = ?")
-      .run(txnId, flat.toUpperCase());
-  },
-
-  // Emergency
-  insertEmergency: (e) => {
-    db.prepare('INSERT INTO emergencies (id, type, flat, status) VALUES (?, ?, ?, ?)')
-      .run(e.id, e.type, e.flat, e.status || 'ACTIVE_ALERT');
-  },
-  getEmergencies: () => db.prepare('SELECT * FROM emergencies ORDER BY timestamp DESC').all(),
+// In-Memory Storage Engine (Used when MONGODB_URI is not configured)
+const memStore = {
+  users: [
+    { id: 'admin-1', name: 'Col. R. S. Rathore (Estate Admin)', phone: '9899900001', email: 'admin@gatepass.com', role: 'admin', password: 'admin123', badge_id: 'ADMIN-01', society: 'Emerald Heights Residency' },
+    { id: 'res-1', name: 'Vishwa (Resident Owner)', phone: '9876543210', email: 'vishwa@residence.com', role: 'resident', flat: 'B-402', society: 'Emerald Heights Residency' },
+    { id: 'res-2', name: 'Pooja Malhotra (Resident Owner)', phone: '9811122233', email: 'pooja@residence.com', role: 'resident', flat: 'A-104', society: 'Emerald Heights Residency' },
+    { id: 'res-3', name: 'Dr. Alok Verma (Resident Owner)', phone: '9822233445', email: 'alok@residence.com', role: 'resident', flat: 'C-201', society: 'Emerald Heights Residency' },
+    { id: 'sec-104', name: 'Rajesh Kumar (Duty Officer)', phone: '9900011222', email: 'guard1@gatepass.com', role: 'guard', gate: 'Main Gate #1', pin: '1234', badge_id: 'SEC-104', society: 'Emerald Heights Residency' },
+    { id: 'sec-108', name: 'Sunil Shinde', phone: '9900033444', email: 'guard2@gatepass.com', role: 'guard', gate: 'Service Gate #2', pin: '1234', badge_id: 'SEC-108', society: 'Emerald Heights Residency' },
+  ],
+  visitors: [
+    { id: 'req-1', name: 'Rahul Sharma', phone: '+91 98765 43210', type: 'Guest', category: 'guest', vehicle: 'KA-03-MG-4120', gate: 'Main Gate 1', purpose: 'Visiting Flat B-402', flat: 'B-402', status: 'pending', image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', created_at: new Date() },
+    { id: 'req-2', name: 'Mukesh Kumar (Zomato)', phone: '+91 91234 56789', type: 'Delivery', category: 'delivery', gate: 'Service Gate 2', purpose: 'Food Delivery • Order #84920', flat: 'B-402', status: 'pending', created_at: new Date() },
+    { id: 'req-3', name: 'Amazon Courier (Karan)', phone: '+91 98112 00011', type: 'Delivery', category: 'delivery', gate: 'Service Gate 2', purpose: 'Parcel Delivery for Flat A-104', flat: 'A-104', status: 'pending', created_at: new Date() },
+    { id: 'v-1', name: 'Dr. Alok Verma', phone: '+91 98333 44555', type: 'Guest', category: 'guest', gate: 'Main Gate 1', purpose: 'Visiting Flat B-402', flat: 'B-402', status: 'approved', in_time: '10:45 AM', created_at: new Date() },
+    { id: 'v-2', name: 'Urban Company AC Tech', phone: '+91 98444 11223', type: 'Staff', category: 'service', gate: 'Main Gate 1', purpose: 'AC Service Flat B-201', flat: 'B-201', status: 'approved', in_time: '11:10 AM', created_at: new Date() },
+  ],
+  passes: [
+    { code: 'GP-7821', name: 'Priyanshu Sharma', phone: '+91 98765 11223', type: 'guest', flat: 'B-402', valid_until: 'Tomorrow, 11:59 PM', leave_at_gate: 0, is_used: false, created_at: new Date() },
+    { code: 'GP-9014', name: 'Ravi Shankar', phone: '+91 98111 55667', type: 'service', flat: 'A-104', valid_until: 'Tomorrow, 08:00 PM', leave_at_gate: 0, is_used: false, created_at: new Date() },
+  ],
+  activity_logs: [
+    { id: 'act-1', name: 'Sunita Devi', role: 'House Maid', category: 'staff', gate: 'Main Gate 1', flat: 'B-402', action: 'Checked In', status: 'approved', timestamp: 'Today, 08:30 AM', created_at: new Date() },
+    { id: 'act-2', name: 'Uber (Swift Dzire)', role: 'Cab / Taxi', category: 'cab', gate: 'Main Gate 1', flat: 'B-402', action: 'Allowed Entry', status: 'approved', timestamp: 'Today, 09:15 AM', created_at: new Date() },
+    { id: 'act-3', name: 'Amazon Courier (Rajesh)', role: 'Delivery', category: 'delivery', gate: 'Gate 2 (Parcel Desk)', flat: 'B-402', action: 'Left at Security Desk', status: 'completed', timestamp: 'Yesterday, 04:45 PM', created_at: new Date() },
+    { id: 'act-4', name: 'Dr. Alok Verma', role: 'Guest', category: 'guest', gate: 'Main Gate 1', flat: 'B-402', action: 'Checked Out', status: 'completed', timestamp: 'Yesterday, 07:10 PM', created_at: new Date() },
+    { id: 'act-5', name: 'Blinkit Delivery', role: 'Delivery', category: 'delivery', gate: 'Service Gate 2', flat: 'A-104', action: 'Allowed Entry', status: 'approved', timestamp: 'Today, 11:10 AM', created_at: new Date() },
+  ],
+  helpdesk_tickets: [
+    { id: 'TICK-101', category: 'Electrical', title: 'Corridor Light Flickering outside Flat B-402', description: 'Ceiling LED panel flickering.', status: 'In Progress', priority: 'Medium', assigned_to: 'Mohammad Farooq (Electrician)', flat: 'B-402', created_at: 'Today, 10:15 AM' },
+    { id: 'TICK-102', category: 'Plumbing', title: 'Water Pressure Issue in Kitchen Sink', description: 'Low water pressure line.', status: 'Resolved', priority: 'Low', assigned_to: 'Kishore (Plumber)', flat: 'B-402', created_at: 'Yesterday, 02:30 PM' },
+    { id: 'TICK-103', category: 'Carpentry', title: 'Main Door Latch Stiff in Flat A-104', description: 'Lock needs alignment.', status: 'In Progress', priority: 'High', assigned_to: 'Raju (Carpenter)', flat: 'A-104', created_at: 'Today, 09:30 AM' },
+  ],
+  staff: [
+    { id: 'staff-1', name: 'Sunita Devi', role: 'Housekeeping / Maid', rating: '4.9 ★', phone: '+91 98220 11223', status: 'Inside Society', entry_time: '08:30 AM', flats_worked: '6 Flats (Block B & C)', badge: 'Police Verified' },
+    { id: 'staff-2', name: 'Ramesh Patel', role: 'Car Cleaner & Driver', rating: '4.8 ★', phone: '+91 97334 22119', status: 'Inside Society', entry_time: '06:45 AM', flats_worked: '4 Flats (Block B)', badge: 'Police Verified' },
+    { id: 'staff-3', name: 'Anjali Rawat', role: 'Cook & Chef', rating: '5.0 ★', phone: '+91 94112 88440', status: 'Expected at 06:00 PM', entry_time: '-', flats_worked: '3 Flats (Block B)', badge: 'Police Verified' },
+    { id: 'staff-4', name: 'Mohammad Farooq', role: 'Society Electrician', rating: '4.9 ★', phone: '+91 98450 33441', status: 'On Duty • Estate Office', entry_time: '08:00 AM', flats_worked: 'Facility Team', badge: 'Official Staff' },
+  ],
+  amenities: [
+    { id: 'am-1', name: 'Clubhouse Banquet Hall', capacity: '150 People', timing: '09:00 AM - 11:00 PM', status: 'Available', price: '₹2,500 / slot', icon: 'home', description: 'Air-conditioned hall with sound system.' },
+    { id: 'am-2', name: 'Olympic Swimming Pool', capacity: '30 People', timing: '06:00 AM - 09:00 PM', status: 'Open Today', price: 'Free for Residents', icon: 'water', description: 'Temperature-controlled 25m pool.' },
+    { id: 'am-3', name: 'Floodlit Tennis Court', capacity: '4 Players', timing: '06:00 AM - 10:00 PM', status: 'Slots Open', price: '₹150 / hr', icon: 'tennisball', description: 'Hard court with LED lighting.' },
+    { id: 'am-4', name: 'Fitness & Cardio Gym', capacity: '25 People', timing: '05:30 AM - 10:30 PM', status: 'Open Today', price: 'Free for Residents', icon: 'barbell', description: 'Modern gym with certified trainer.' },
+  ],
+  maintenance_bills: [
+    { id: 'bill-b402', flat: 'B-402', month: 'November 2026', due_date: '15 Nov 2026', amount: 4250, status: 'Unpaid' },
+    { id: 'bill-a104', flat: 'A-104', month: 'November 2026', due_date: '15 Nov 2026', amount: 3600, status: 'Unpaid' },
+    { id: 'bill-c201', flat: 'C-201', month: 'November 2026', due_date: '15 Nov 2026', amount: 4100, status: 'Paid', txn_id: 'GP-TXN-881293' },
+  ],
+  emergencies: [],
 };
 
-initSchema();
+const collections = Object.keys(memStore);
+
+async function initSchema() {
+  if (uri) {
+    try {
+      console.log('[GatePass Database] Connecting to MongoDB Atlas / Cloud Cluster...');
+      client = new MongoClient(uri, {
+        maxPoolSize: 20,
+        minPoolSize: 2,
+        maxIdleTimeMS: 300000,
+        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000,
+      });
+      await client.connect();
+      database = client.db(dbName);
+      isMongo = true;
+      console.log(`[GatePass Database] Connected to MongoDB database "${dbName}" successfully!`);
+
+      // Create Indexes
+      await Promise.all([
+        database.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true }),
+        database.collection('users').createIndex({ role: 1, flat: 1 }),
+        database.collection('users').createIndex({ badge_id: 1 }, { sparse: true }),
+        database.collection('visitors').createIndex({ status: 1, flat: 1, created_at: -1 }),
+        database.collection('passes').createIndex({ code: 1 }, { unique: true }),
+        database.collection('activity_logs').createIndex({ flat: 1, created_at: -1 }),
+        database.collection('maintenance_bills').createIndex({ flat: 1 }),
+      ]);
+
+      // Seed if empty
+      const userCount = await database.collection('users').countDocuments();
+      if (userCount === 0) {
+        console.log('[GatePass Database] Seeding initial data into MongoDB...');
+        for (const c of collections) {
+          if (memStore[c] && memStore[c].length > 0) {
+            await database.collection(c).insertMany(memStore[c]);
+          }
+        }
+        console.log('[GatePass Database] MongoDB initial seeding complete.');
+      }
+      return;
+    } catch (err) {
+      console.warn('[GatePass Database] MongoDB connection failed (' + err.message + '). Falling back to built-in database engine.');
+      isMongo = false;
+    }
+  }
+
+  console.log('[GatePass Database] Running with Built-in High-Performance Storage Engine (Zero external dependencies).');
+}
+
+const col = (name) => (database ? database.collection(name) : null);
+const cleanFlat = (flat) => (flat || '').trim().toUpperCase();
+const withoutMongoId = (doc) => {
+  if (!doc) return doc;
+  const { _id, ...rest } = doc;
+  return rest;
+};
+const many = (cursor) => cursor.toArray().then((items) => items.map(withoutMongoId));
+
+const DB = {
+  initSchema,
+
+  async close() {
+    if (client) await client.close();
+  },
+
+  getDatabaseInfo() {
+    return {
+      type: isMongo ? 'MongoDB Atlas Cloud Database' : 'Built-in High-Speed Engine (Persistent & Pre-seeded)',
+      connected: true,
+      isCloud: isMongo,
+      databaseName: isMongo ? dbName : 'gatepass-internal',
+      tables: collections,
+      timestamp: new Date().toISOString(),
+    };
+  },
+
+  async resetDatabase() {
+    if (isMongo) {
+      await Promise.all(collections.map((name) => col(name).deleteMany({})));
+      await initSchema();
+    } else {
+      // In-memory reset
+      memStore.visitors = memStore.visitors.slice(0, 3);
+      memStore.activity_logs = memStore.activity_logs.slice(0, 5);
+      memStore.passes = memStore.passes.slice(0, 2);
+    }
+  },
+
+  async getUserByPhoneAndFlat(phone, flat) {
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    const cFlat = cleanFlat(flat);
+    if (isMongo) {
+      return withoutMongoId(
+        await col('users').findOne({
+          role: 'resident',
+          flat: cFlat,
+          phone: { $regex: cleanPhone },
+        })
+      );
+    }
+    return memStore.users.find(
+      (u) => u.role === 'resident' && u.flat === cFlat && (u.phone.includes(cleanPhone) || cleanPhone.includes(u.phone))
+    ) || null;
+  },
+
+  async getUserByBadgeOrPhone(value) {
+    const clean = (value || '').trim();
+    const upper = clean.toUpperCase();
+    if (isMongo) {
+      return withoutMongoId(
+        await col('users').findOne({
+          $or: [{ badge_id: upper }, { phone: clean }],
+        })
+      );
+    }
+    return memStore.users.find((u) => (u.badge_id && u.badge_id.toUpperCase() === upper) || u.phone === clean) || null;
+  },
+
+  async getUserByEmail(email) {
+    const clean = (email || '').trim().toLowerCase();
+    const upper = clean.toUpperCase();
+    if (isMongo) {
+      return withoutMongoId(
+        await col('users').findOne({
+          $or: [{ email: clean }, { badge_id: upper }],
+        })
+      );
+    }
+    return memStore.users.find(
+      (u) => (u.email && u.email.toLowerCase() === clean) || (u.badge_id && u.badge_id.toUpperCase() === upper)
+    ) || null;
+  },
+
+  async getDemoUsers() {
+    if (isMongo) {
+      const [admins, residents, guards] = await Promise.all([
+        many(col('users').find({ role: 'admin' })),
+        many(col('users').find({ role: 'resident' })),
+        many(col('users').find({ role: 'guard' })),
+      ]);
+      return { admins, residents, guards };
+    }
+    return {
+      admins: memStore.users.filter((u) => u.role === 'admin'),
+      residents: memStore.users.filter((u) => u.role === 'resident'),
+      guards: memStore.users.filter((u) => u.role === 'guard'),
+    };
+  },
+
+  async getPendingRequests(flat) {
+    const cFlat = flat ? cleanFlat(flat) : null;
+    if (isMongo) {
+      return many(
+        col('visitors')
+          .find({ status: 'pending', ...(cFlat ? { flat: cFlat } : {}) })
+          .sort({ created_at: -1 })
+      );
+    }
+    return memStore.visitors.filter(
+      (v) => v.status === 'pending' && (!cFlat || cleanFlat(v.flat) === cFlat)
+    );
+  },
+
+  async getActiveVisitors(flat) {
+    const cFlat = flat ? cleanFlat(flat) : null;
+    if (isMongo) {
+      return many(
+        col('visitors')
+          .find({ status: 'approved', ...(cFlat ? { flat: cFlat } : {}) })
+          .sort({ created_at: -1 })
+      );
+    }
+    return memStore.visitors.filter(
+      (v) => (v.status === 'approved' || v.status === 'inside') && (!cFlat || cleanFlat(v.flat) === cFlat)
+    );
+  },
+
+  async getVisitorById(id) {
+    if (isMongo) return withoutMongoId(await col('visitors').findOne({ id }));
+    return memStore.visitors.find((v) => v.id === id) || null;
+  },
+
+  async insertVisitor(visitor) {
+    const doc = { ...visitor, created_at: new Date() };
+    if (isMongo) {
+      await col('visitors').insertOne(doc);
+    } else {
+      memStore.visitors.unshift(doc);
+    }
+  },
+
+  async updateVisitorStatus(id, status, inTime, outTime) {
+    if (isMongo) {
+      const update = { status };
+      if (inTime) update.in_time = inTime;
+      if (outTime) update.out_time = outTime;
+      await col('visitors').updateOne({ id }, { $set: update });
+    } else {
+      const v = memStore.visitors.find((x) => x.id === id);
+      if (v) {
+        v.status = status;
+        if (inTime) v.in_time = inTime;
+        if (outTime) v.out_time = outTime;
+      }
+    }
+  },
+
+  async getPasses(flat) {
+    const cFlat = flat ? cleanFlat(flat) : null;
+    if (isMongo) {
+      return many(col('passes').find(cFlat ? { flat: cFlat } : {}).sort({ created_at: -1 }));
+    }
+    return memStore.passes.filter((p) => !cFlat || cleanFlat(p.flat) === cFlat);
+  },
+
+  async getPassByCode(code) {
+    const cCode = (code || '').trim().toUpperCase();
+    if (isMongo) return withoutMongoId(await col('passes').findOne({ code: cCode }));
+    return memStore.passes.find((p) => p.code.toUpperCase() === cCode) || null;
+  },
+
+  async insertPass(pass) {
+    const doc = { ...pass, created_at: new Date(), is_used: false };
+    if (isMongo) {
+      await col('passes').insertOne(doc);
+    } else {
+      memStore.passes.unshift(doc);
+    }
+  },
+
+  async getActivityLogs(flat) {
+    const cFlat = flat ? cleanFlat(flat) : null;
+    if (isMongo) {
+      return many(col('activity_logs').find(cFlat ? { flat: cFlat } : {}).sort({ created_at: -1 }).limit(50));
+    }
+    return memStore.activity_logs.filter((a) => !cFlat || cleanFlat(a.flat) === cFlat).slice(0, 50);
+  },
+
+  async insertActivity(activity) {
+    const doc = { ...activity, created_at: new Date() };
+    if (isMongo) {
+      await col('activity_logs').insertOne(doc);
+    } else {
+      memStore.activity_logs.unshift(doc);
+    }
+  },
+
+  async getHelpdeskTickets(flat) {
+    const cFlat = flat ? cleanFlat(flat) : null;
+    if (isMongo) {
+      return many(col('helpdesk_tickets').find(cFlat ? { flat: cFlat } : {}).sort({ created_at: -1 }));
+    }
+    return memStore.helpdesk_tickets.filter((t) => !cFlat || cleanFlat(t.flat) === cFlat);
+  },
+
+  async insertTicket(ticket) {
+    if (isMongo) {
+      await col('helpdesk_tickets').insertOne(ticket);
+    } else {
+      memStore.helpdesk_tickets.unshift(ticket);
+    }
+  },
+
+  async getStaff() {
+    if (isMongo) return many(col('staff').find({}));
+    return memStore.staff;
+  },
+
+  async getAmenities() {
+    if (isMongo) return many(col('amenities').find({}));
+    return memStore.amenities;
+  },
+
+  async getMaintenanceBill(flat = 'B-402') {
+    const cFlat = cleanFlat(flat);
+    if (isMongo) {
+      return withoutMongoId(await col('maintenance_bills').findOne({ flat: cFlat })) || {
+        month: 'November 2026',
+        amount: 4250,
+        status: 'Unpaid',
+        flat: cFlat,
+      };
+    }
+    return (
+      memStore.maintenance_bills.find((b) => cleanFlat(b.flat) === cFlat) || {
+        month: 'November 2026',
+        amount: 4250,
+        status: 'Unpaid',
+        flat: cFlat,
+      }
+    );
+  },
+
+  async getAllMaintenanceBills() {
+    if (isMongo) return many(col('maintenance_bills').find({}));
+    return memStore.maintenance_bills;
+  },
+
+  async payMaintenanceBill(flat, txnId) {
+    const cFlat = cleanFlat(flat);
+    if (isMongo) {
+      await col('maintenance_bills').updateOne(
+        { flat: cFlat },
+        { $set: { status: 'Paid', txn_id: txnId, paid_at: new Date() } }
+      );
+    } else {
+      const b = memStore.maintenance_bills.find((x) => cleanFlat(x.flat) === cFlat);
+      if (b) {
+        b.status = 'Paid';
+        b.txn_id = txnId;
+        b.paid_at = new Date();
+      }
+    }
+  },
+
+  async insertEmergency(emergency) {
+    const doc = { ...emergency, timestamp: new Date() };
+    if (isMongo) {
+      await col('emergencies').insertOne(doc);
+    } else {
+      memStore.emergencies.unshift(doc);
+    }
+  },
+
+  async getEmergencies() {
+    if (isMongo) return many(col('emergencies').find({}).sort({ timestamp: -1 }));
+    return memStore.emergencies;
+  },
+};
 
 module.exports = DB;

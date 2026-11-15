@@ -31,18 +31,20 @@ function broadcast(event, data) {
 wss.on('connection', (ws) => {
   console.log(`[WebSocket] Client connected. Total clients: ${wss.clients.size}`);
 
-  // Send initial state from SQLite
-  ws.send(
-    JSON.stringify({
+  Promise.all([
+    DB.getPendingRequests(),
+    DB.getActivityLogs(),
+    DB.getActiveVisitors(),
+    DB.getMaintenanceBill('B-402'),
+  ]).then(([pendingRequests, recentActivity, activeVisitors, maintenance]) => {
+    ws.send(JSON.stringify({
       event: 'INIT_STATE',
-      data: {
-        pendingRequests: DB.getPendingRequests(),
-        recentActivity: DB.getActivityLogs(),
-        activeVisitors: DB.getActiveVisitors(),
-        maintenance: DB.getMaintenanceBill('B-402'),
-      },
-    })
-  );
+      data: { pendingRequests, recentActivity, activeVisitors, maintenance },
+    }));
+  }).catch((error) => {
+    console.error('[WebSocket] Initial state failed:', error);
+    ws.close(1011, 'Database unavailable');
+  });
 
   ws.on('close', () => {
     console.log(`[WebSocket] Client disconnected. Remaining: ${wss.clients.size}`);
@@ -67,18 +69,22 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     app: 'GatePass Enterprise Backend',
-    database: 'SQLite (node:sqlite WAL)',
+    database: DB.getDatabaseInfo().type,
     timestamp: new Date().toISOString(),
     connectedClients: wss.clients.size,
   });
 });
 
-// 2. Auth Endpoints
-app.get('/api/auth/demo-users', (req, res) => {
-  res.json(DB.getDemoUsers());
+app.get('/api/db/status', (req, res) => {
+  res.json(DB.getDatabaseInfo());
 });
 
-app.post('/api/auth/login', (req, res) => {
+// 2. Auth Endpoints
+app.get('/api/auth/demo-users', async (req, res) => {
+  res.json(await DB.getDemoUsers());
+});
+
+app.post('/api/auth/login', async (req, res) => {
   const { role, identifier, pinOrOtp, flat, gate, password, phone, email, badgeId } = req.body;
 
   // 1. Society Admin Login
@@ -86,7 +92,7 @@ app.post('/api/auth/login', (req, res) => {
     const adminId = (identifier || email || '').trim().toLowerCase();
     const adminPwd = (password || pinOrOtp || '').trim();
 
-    const admin = DB.getUserByEmail(adminId) || DB.getUserByBadgeOrPhone(adminId);
+    const admin = await DB.getUserByEmail(adminId) || await DB.getUserByBadgeOrPhone(adminId);
     if (admin) {
       if (adminPwd && admin.password && adminPwd !== admin.password && adminPwd !== 'admin123') {
         return res.status(401).json({ error: 'Invalid admin credentials or password' });
@@ -118,7 +124,7 @@ app.post('/api/auth/login', (req, res) => {
   // 2. Security Guard Login
   if (role === 'guard' || role === 'security') {
     const cleanId = (identifier || badgeId || '').trim();
-    let guard = DB.getUserByBadgeOrPhone(cleanId);
+    let guard = await DB.getUserByBadgeOrPhone(cleanId);
 
     if (guard) {
       if (pinOrOtp && guard.pin && pinOrOtp !== guard.pin && pinOrOtp !== '1234') {
@@ -153,7 +159,7 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
 
-  const resident = DB.getUserByPhoneAndFlat(userPhone, userFlat);
+  const resident = await DB.getUserByPhoneAndFlat(userPhone, userFlat);
   if (resident) {
     return res.json({
       success: true,
@@ -181,12 +187,12 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // 3. Visitor Requests
-app.get('/api/requests', (req, res) => {
+app.get('/api/requests', async (req, res) => {
   const { flat } = req.query;
-  res.json(DB.getPendingRequests(flat));
+  res.json(await DB.getPendingRequests(flat));
 });
 
-app.post('/api/requests', (req, res) => {
+app.post('/api/requests', async (req, res) => {
   const { name, phone, type, category, vehicle, gate, purpose, flat } = req.body;
   const newReq = {
     id: 'req-' + Date.now(),
@@ -204,23 +210,23 @@ app.post('/api/requests', (req, res) => {
       : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
   };
 
-  DB.insertVisitor(newReq);
+  await DB.insertVisitor(newReq);
   broadcast('REQUEST_CREATED', newReq);
 
   res.status(201).json({ success: true, request: newReq });
 });
 
 // Approve Request
-app.put('/api/requests/:id/approve', (req, res) => {
+app.put('/api/requests/:id/approve', async (req, res) => {
   const { id } = req.params;
   const { leaveAtGate } = req.body;
-  const visitor = DB.getVisitorById(id);
+  const visitor = await DB.getVisitorById(id);
 
   if (!visitor) {
     return res.status(404).json({ error: 'Request not found' });
   }
 
-  DB.updateVisitorStatus(id, leaveAtGate ? 'completed' : 'approved', new Date().toISOString(), null);
+  await DB.updateVisitorStatus(id, leaveAtGate ? 'completed' : 'approved', new Date().toISOString(), null);
 
   const newActivity = {
     id: 'act-' + Date.now(),
@@ -232,7 +238,7 @@ app.put('/api/requests/:id/approve', (req, res) => {
     status: 'approved',
     timestamp: 'Just now',
   };
-  DB.insertActivity(newActivity);
+  await DB.insertActivity(newActivity);
 
   let newActiveVisitor = null;
   if (!leaveAtGate) {
@@ -256,15 +262,15 @@ app.put('/api/requests/:id/approve', (req, res) => {
 });
 
 // Deny Request
-app.put('/api/requests/:id/deny', (req, res) => {
+app.put('/api/requests/:id/deny', async (req, res) => {
   const { id } = req.params;
-  const visitor = DB.getVisitorById(id);
+  const visitor = await DB.getVisitorById(id);
 
   if (!visitor) {
     return res.status(404).json({ error: 'Request not found' });
   }
 
-  DB.updateVisitorStatus(id, 'denied', null, null);
+  await DB.updateVisitorStatus(id, 'denied', null, null);
 
   const newActivity = {
     id: 'act-' + Date.now(),
@@ -276,7 +282,7 @@ app.put('/api/requests/:id/deny', (req, res) => {
     status: 'denied',
     timestamp: 'Just now',
   };
-  DB.insertActivity(newActivity);
+  await DB.insertActivity(newActivity);
 
   const payload = { requestId: id, activity: newActivity };
   broadcast('REQUEST_RESOLVED', { ...payload, action: 'denied' });
@@ -284,12 +290,12 @@ app.put('/api/requests/:id/deny', (req, res) => {
 });
 
 // 4. Passes
-app.get('/api/passes', (req, res) => {
+app.get('/api/passes', async (req, res) => {
   const { flat } = req.query;
-  res.json(DB.getPasses(flat));
+  res.json(await DB.getPasses(flat));
 });
 
-app.post('/api/passes', (req, res) => {
+app.post('/api/passes', async (req, res) => {
   const { name, phone, type, leaveAtGate, flat } = req.body;
   const newPass = {
     code: 'GP-' + Math.floor(1000 + Math.random() * 9000),
@@ -301,18 +307,18 @@ app.post('/api/passes', (req, res) => {
     leave_at_gate: leaveAtGate ? 1 : 0,
   };
 
-  DB.insertPass(newPass);
+  await DB.insertPass(newPass);
   broadcast('PASS_CREATED', newPass);
 
   res.status(201).json({ success: true, pass: newPass });
 });
 
-app.post('/api/passes/verify', (req, res) => {
+app.post('/api/passes/verify', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code is required' });
 
   const cleanCode = code.trim().toUpperCase();
-  const pass = DB.getPassByCode(cleanCode);
+  const pass = await DB.getPassByCode(cleanCode);
 
   if (pass) {
     const newActiveVisitor = {
@@ -321,7 +327,7 @@ app.post('/api/passes/verify', (req, res) => {
       flat: pass.flat,
       inTime: 'Just now',
     };
-    DB.insertVisitor({
+    await DB.insertVisitor({
       id: newActiveVisitor.id,
       name: pass.name,
       phone: pass.phone,
@@ -344,7 +350,7 @@ app.post('/api/passes/verify', (req, res) => {
       status: 'approved',
       timestamp: 'Just now',
     };
-    DB.insertActivity(newActivity);
+    await DB.insertActivity(newActivity);
 
     broadcast('PASS_VERIFIED', { pass, activeVisitor: newActiveVisitor, activity: newActivity });
     return res.json({ valid: true, message: `Passcode ${cleanCode} is valid for Flat ${pass.flat}`, pass });
@@ -362,18 +368,18 @@ app.post('/api/passes/verify', (req, res) => {
 });
 
 // 5. Active Visitors Inside & Checkout
-app.get('/api/visitors/active', (req, res) => {
+app.get('/api/visitors/active', async (req, res) => {
   const { flat } = req.query;
-  res.json(DB.getActiveVisitors(flat));
+  res.json(await DB.getActiveVisitors(flat));
 });
 
-app.put('/api/visitors/:id/checkout', (req, res) => {
+app.put('/api/visitors/:id/checkout', async (req, res) => {
   const { id } = req.params;
-  const visitor = DB.getVisitorById(id);
+  const visitor = await DB.getVisitorById(id);
 
   if (!visitor) return res.status(404).json({ error: 'Visitor not found' });
 
-  DB.updateVisitorStatus(id, 'checked_out', null, new Date().toISOString());
+  await DB.updateVisitorStatus(id, 'checked_out', null, new Date().toISOString());
 
   const exitActivity = {
     id: 'act-' + Date.now(),
@@ -385,25 +391,25 @@ app.put('/api/visitors/:id/checkout', (req, res) => {
     status: 'completed',
     timestamp: 'Just now',
   };
-  DB.insertActivity(exitActivity);
+  await DB.insertActivity(exitActivity);
 
   broadcast('VISITOR_CHECKED_OUT', { visitorId: id, visitor, activity: exitActivity });
   res.json({ success: true, visitor, activity: exitActivity });
 });
 
 // 6. Activity Logs
-app.get('/api/activity', (req, res) => {
+app.get('/api/activity', async (req, res) => {
   const { flat } = req.query;
-  res.json(DB.getActivityLogs(flat));
+  res.json(await DB.getActivityLogs(flat));
 });
 
 // 7. Helpdesk Tickets
-app.get('/api/helpdesk', (req, res) => {
+app.get('/api/helpdesk', async (req, res) => {
   const { flat } = req.query;
-  res.json(DB.getHelpdeskTickets(flat));
+  res.json(await DB.getHelpdeskTickets(flat));
 });
 
-app.post('/api/helpdesk', (req, res) => {
+app.post('/api/helpdesk', async (req, res) => {
   const { category, title, description, priority, flat } = req.body;
   const newTicket = {
     id: 'TICK-' + Math.floor(100 + Math.random() * 900),
@@ -417,17 +423,17 @@ app.post('/api/helpdesk', (req, res) => {
     created_at: 'Just now',
   };
 
-  DB.insertTicket(newTicket);
+  await DB.insertTicket(newTicket);
   res.status(201).json({ success: true, ticket: newTicket });
 });
 
 // 8. Staff & Amenities
-app.get('/api/staff', (req, res) => {
-  res.json(DB.getStaff());
+app.get('/api/staff', async (req, res) => {
+  res.json(await DB.getStaff());
 });
 
-app.get('/api/amenities', (req, res) => {
-  res.json(DB.getAmenities());
+app.get('/api/amenities', async (req, res) => {
+  res.json(await DB.getAmenities());
 });
 
 app.post('/api/amenities/:id/book', (req, res) => {
@@ -438,16 +444,16 @@ app.post('/api/amenities/:id/book', (req, res) => {
 });
 
 // 9. Maintenance
-app.get('/api/maintenance', (req, res) => {
+app.get('/api/maintenance', async (req, res) => {
   const flat = req.query.flat || 'B-402';
-  const bill = DB.getMaintenanceBill(flat);
+  const bill = await DB.getMaintenanceBill(flat);
   res.json(bill || { month: 'November 2026', amount: 4250, status: 'Unpaid', flat });
 });
 
-app.post('/api/maintenance/pay', (req, res) => {
+app.post('/api/maintenance/pay', async (req, res) => {
   const flat = (req.body.flat || 'B-402').toUpperCase();
   const txnId = 'GP-TXN-' + Date.now().toString().slice(-6);
-  DB.payMaintenanceBill(flat, txnId);
+  await DB.payMaintenanceBill(flat, txnId);
 
   const receipt = { txnId, amount: 4250, month: 'November 2026', flat, paidAt: new Date().toISOString() };
   broadcast('BILL_PAID', receipt);
@@ -455,13 +461,15 @@ app.post('/api/maintenance/pay', (req, res) => {
 });
 
 // 10. Admin Overview & Society Directory
-app.get('/api/admin/overview', (req, res) => {
-  const activeVisitors = DB.getActiveVisitors();
-  const pendingRequests = DB.getPendingRequests();
-  const allBills = DB.getAllMaintenanceBills();
-  const tickets = DB.getHelpdeskTickets();
-  const staff = DB.getStaff();
-  const activities = DB.getActivityLogs();
+app.get('/api/admin/overview', async (req, res) => {
+  const [activeVisitors, pendingRequests, allBills, tickets, staff, activities] = await Promise.all([
+    DB.getActiveVisitors(),
+    DB.getPendingRequests(),
+    DB.getAllMaintenanceBills(),
+    DB.getHelpdeskTickets(),
+    DB.getStaff(),
+    DB.getActivityLogs(),
+  ]);
 
   const flats = [
     { flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-05-MM-9214' },
@@ -505,7 +513,7 @@ app.get('/api/admin/overview', (req, res) => {
 });
 
 // 10. Emergency SOS
-app.post('/api/sos', (req, res) => {
+app.post('/api/sos', async (req, res) => {
   const { type, flat } = req.body;
   const emergency = {
     id: 'sos-' + Date.now(),
@@ -514,27 +522,35 @@ app.post('/api/sos', (req, res) => {
     status: 'ACTIVE_ALERT',
   };
 
-  DB.insertEmergency(emergency);
+  await DB.insertEmergency(emergency);
   broadcast('EMERGENCY_TRIGGERED', emergency);
 
   res.status(201).json({ success: true, emergency });
 });
 
 // 11. Developer / Admin Endpoints
-app.post('/api/dev/reset-db', (req, res) => {
-  DB.resetDatabase();
-  broadcast('INIT_STATE', {
-    pendingRequests: DB.getPendingRequests(),
-    recentActivity: DB.getActivityLogs(),
-    activeVisitors: DB.getActiveVisitors(),
-    maintenance: DB.getMaintenanceBill('B-402'),
-  });
+app.post('/api/dev/reset-db', async (req, res) => {
+  await DB.resetDatabase();
+  const [pendingRequests, recentActivity, activeVisitors, maintenance] = await Promise.all([
+    DB.getPendingRequests(),
+    DB.getActivityLogs(),
+    DB.getActiveVisitors(),
+    DB.getMaintenanceBill('B-402'),
+  ]);
+  broadcast('INIT_STATE', { pendingRequests, recentActivity, activeVisitors, maintenance });
   res.json({ success: true, message: 'Database reset and re-seeded successfully.' });
 });
 
-// Start Server (0.0.0.0 binds to all network interfaces for Render & cloud deployment)
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[GatePass Server] Running on http://0.0.0.0:${PORT} (Production/Render Ready)`);
-  console.log(`[GatePass Server] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
-  console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
-});
+// Connect before accepting traffic so every route has a ready MongoDB handle.
+DB.initSchema()
+  .then(() => {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`[GatePass Server] Running on http://0.0.0.0:${PORT} (${DB.getDatabaseInfo().type})`);
+      console.log(`[GatePass Server] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
+      console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
+    });
+  })
+  .catch((error) => {
+    console.error('[GatePass Server] MongoDB startup failed:', error);
+    process.exitCode = 1;
+  });
