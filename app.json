@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F2D6B"
+      "backgroundColor": "#064E3B"
     },
     "ios": {
       "supportsTablet": true,
@@ -17,9 +17,9 @@
     },
     "android": {
       "package": "com.gatepass.app",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#0F2D6B",
+        "backgroundColor": "#064E3B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
