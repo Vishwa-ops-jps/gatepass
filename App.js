@@ -4,138 +4,78 @@ import {
   View,
   Text,
   SafeAreaView,
-  TouchableOpacity,
   StatusBar,
   Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from './src/theme/colors';
-import Header from './src/components/Header';
-import ResidentHome from './src/components/ResidentHome';
 import GuardHome from './src/components/GuardHome';
-import AdminHome from './src/components/AdminHome';
-import StaffTab from './src/components/StaffTab';
-import AmenitiesTab from './src/components/AmenitiesTab';
-import MaintenanceTab from './src/components/MaintenanceTab';
-import QuickActionModal from './src/components/QuickActionModal';
-import QRPassModal from './src/components/QRPassModal';
-import SOSModal from './src/components/SOSModal';
-import IntercomCallModal from './src/components/IntercomCallModal';
-import HelpdeskModal from './src/components/HelpdeskModal';
-import VehicleFinderModal from './src/components/VehicleFinderModal';
-import LoginScreen from './src/components/LoginScreen';
-import DevToolsModal from './src/components/DevToolsModal';
-import {
-  initialPendingRequests,
-  initialRecentActivity,
-  initialHelpdeskTickets,
-  registeredVehicles,
-} from './src/data/mockData';
 import {
   initWebSocket,
   fetchInitialData,
-  apiCreateVisitorRequest,
   apiLogVisitorEntry,
-  apiApproveRequest,
-  apiDenyRequest,
-  apiCreatePass,
   apiCheckOutVisitor,
-  apiTriggerSOS,
+  apiCreateVisitorRequest,
 } from './src/services/api';
 
 export default function App() {
-  // Default directly to Security Guard Duty Terminal (Replacing Manual Paper Logbook)
-  const [currentUser, setCurrentUser] = useState({
-    id: 'sec-104',
-    name: 'Officer Rajesh Kumar',
-    role: 'guard',
-    badge_id: 'SEC-104',
-    gate: 'Main Gate #1',
-    society: 'Emerald Heights Residency',
-  });
-  const [role, setRole] = useState('guard'); // Opens directly in Security Guard mode
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'staff' | 'amenities' | 'maintenance'
-
-  // Application Data States
-  const [pendingRequests, setPendingRequests] = useState(initialPendingRequests);
-  const [recentActivity, setRecentActivity] = useState(initialRecentActivity);
+  // Pure Dedicated Security Gate Entry System
   const [activeVisitors, setActiveVisitors] = useState([
     { id: 'v-1', name: 'Dr. Alok Verma', flat: 'B-402', inTime: '10:45 AM' },
     { id: 'v-2', name: 'Urban Company AC Tech', flat: 'B-201', inTime: '11:10 AM' },
   ]);
-  const [tickets, setTickets] = useState(initialHelpdeskTickets);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [recentActivity, setRecentActivity] = useState([]);
 
-  // Modal States
-  const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [actionType, setActionType] = useState('guest');
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [currentQRPass, setCurrentQRPass] = useState(null);
-  const [sosModalVisible, setSosModalVisible] = useState(false);
-  const [intercomRequest, setIntercomRequest] = useState(null);
-  const [helpdeskVisible, setHelpdeskVisible] = useState(false);
-  const [vehicleFinderVisible, setVehicleFinderVisible] = useState(false);
-  const [devToolsVisible, setDevToolsVisible] = useState(false);
-
-  // Connect to Backend & Realtime WebSockets on Mount
+  // Fetch initial visitor data & connect Realtime WebSocket
   useEffect(() => {
-    // 1. Fetch initial live state
-    fetchInitialData().then((data) => {
-      if (data && data.requests) {
-        setBackendConnected(true);
-        if (data.requests.length > 0) setPendingRequests(data.requests);
-        if (data.activity && data.activity.length > 0) setRecentActivity(data.activity);
-        if (data.activeVisitors && data.activeVisitors.length > 0) setActiveVisitors(data.activeVisitors);
-      }
-    });
+    fetchInitialData()
+      .then((data) => {
+        if (data) {
+          setBackendConnected(true);
+          if (data.activeVisitors && data.activeVisitors.length > 0) {
+            setActiveVisitors(data.activeVisitors);
+          }
+          if (data.activity && data.activity.length > 0) {
+            setRecentActivity(data.activity);
+          }
+        }
+      })
+      .catch(() => {});
 
-    // 2. Realtime WebSocket listener
+    // Realtime WebSocket listener
     const handleWebSocketEvent = (msg) => {
       setBackendConnected(true);
       const { event, data } = msg;
 
       switch (event) {
         case 'INIT_STATE':
-          if (data.pendingRequests) setPendingRequests(data.pendingRequests);
-          if (data.recentActivity) setRecentActivity(data.recentActivity);
           if (data.activeVisitors) setActiveVisitors(data.activeVisitors);
           break;
 
-        case 'REQUEST_CREATED':
-          setPendingRequests((prev) => [data, ...prev.filter((r) => r.id !== data.id)]);
-          // If in resident view, automatically pop up the Intercom CCTV call screen!
-          setIntercomRequest(data);
-          break;
-
-        case 'REQUEST_RESOLVED':
-          setPendingRequests((prev) => prev.filter((r) => r.id !== data.requestId));
-          setIntercomRequest(null);
-          if (data.activity) {
-            setRecentActivity((prev) => [data.activity, ...prev]);
-          }
-          if (data.activeVisitor) {
-            setActiveVisitors((prev) => [data.activeVisitor, ...prev]);
-          }
-          break;
-
-        case 'PASS_VERIFIED':
-          if (data.activeVisitor) {
-            setActiveVisitors((prev) => [data.activeVisitor, ...prev]);
-          }
-          if (data.activity) {
-            setRecentActivity((prev) => [data.activity, ...prev]);
+        case 'VISITOR_ENTERED':
+          if (data && data.visitor) {
+            setActiveVisitors((prev) => [
+              {
+                id: data.visitor.id,
+                name: data.visitor.name,
+                flat: data.visitor.flat,
+                inTime: data.visitor.in_time_display || 'Just now',
+                image: data.visitor.image,
+                purpose: data.visitor.purpose,
+                vehicle: data.visitor.vehicle,
+              },
+              ...prev.filter((v) => v.id !== data.visitor.id),
+            ]);
           }
           break;
 
         case 'VISITOR_CHECKED_OUT':
-          setActiveVisitors((prev) => prev.filter((v) => v.id !== data.visitorId));
-          if (data.activity) {
-            setRecentActivity((prev) => [data.activity, ...prev]);
+          if (data && data.visitorId) {
+            setActiveVisitors((prev) => prev.filter((v) => v.id !== data.visitorId));
           }
-          break;
-
-        case 'EMERGENCY_TRIGGERED':
-          Alert.alert('🚨 SECURITY EMERGENCY ALERT!', `Alert from ${data.flat}: ${data.type}`);
           break;
 
         default:
@@ -146,132 +86,7 @@ export default function App() {
     initWebSocket(handleWebSocketEvent);
   }, []);
 
-  // Toggle between Resident, Guard Desk, and Society Admin mode
-  const handleToggleRole = () => {
-    let nextRole = 'resident';
-    if (role === 'resident') nextRole = 'guard';
-    else if (role === 'guard') nextRole = 'admin';
-    else nextRole = 'resident';
-
-    setRole(nextRole);
-    if (nextRole === 'admin') {
-      setCurrentUser((prev) => ({
-        ...prev,
-        role: 'admin',
-        name: 'Col. R. S. Rathore (Admin)',
-        society: 'Emerald Heights Residency',
-        badge_id: 'ADMIN-01',
-      }));
-    } else if (nextRole === 'guard') {
-      setCurrentUser((prev) => ({
-        ...prev,
-        role: 'guard',
-        name: prev?.badgeId ? prev.name : 'Rajesh Kumar (Duty Officer)',
-        gate: prev?.gate || 'Main Gate #1',
-      }));
-    } else {
-      setCurrentUser((prev) => ({
-        ...prev,
-        role: 'resident',
-        name: prev?.flat ? prev.name : 'Vishwa (Resident Owner)',
-        flat: prev?.flat || 'B-402',
-      }));
-    }
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      `Log out from GatePass (${currentUser?.name || 'Current User'})?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: () => setCurrentUser(null),
-        },
-      ]
-    );
-  };
-
-  // Handle Resident Approving a Visitor
-  const handleApproveRequest = async (id, leaveAtGate = false) => {
-    const target = pendingRequests.find((r) => r.id === id);
-    if (!target) return;
-
-    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
-    setIntercomRequest(null);
-
-    const newActivity = {
-      id: 'act-' + Date.now(),
-      name: target.name,
-      role: target.type,
-      category: target.category,
-      time: 'Just now',
-      gate: target.gate,
-      action: leaveAtGate ? 'Left at Gate' : 'Allowed Entry',
-      status: 'approved',
-    };
-    setRecentActivity((prev) => [newActivity, ...prev]);
-
-    if (!leaveAtGate) {
-      setActiveVisitors((prev) => [
-        {
-          id: 'v-' + Date.now(),
-          name: target.name,
-          flat: 'B-402',
-          inTime: 'Just now',
-        },
-        ...prev,
-      ]);
-    }
-
-    try {
-      await apiApproveRequest(id, leaveAtGate);
-    } catch (e) {}
-
-    Alert.alert(
-      leaveAtGate ? 'Parcel Kept at Gate' : 'Entry Approved!',
-      `${target.name} has been notified and granted entry at ${target.gate}.`
-    );
-  };
-
-  // Handle Resident Denying a Visitor
-  const handleDenyRequest = async (id) => {
-    const target = pendingRequests.find((r) => r.id === id);
-    if (!target) return;
-
-    setPendingRequests((prev) => prev.filter((r) => r.id !== id));
-    setIntercomRequest(null);
-
-    const newActivity = {
-      id: 'act-' + Date.now(),
-      name: target.name,
-      role: target.type,
-      category: target.category,
-      time: 'Just now',
-      gate: target.gate,
-      action: 'Denied Entry',
-      status: 'denied',
-    };
-    setRecentActivity((prev) => [newActivity, ...prev]);
-
-    try {
-      await apiDenyRequest(id);
-    } catch (e) {}
-
-    Alert.alert('Entry Denied', `${target.name} was denied access by Flat B-402.`);
-  };
-
-  // Handle Guard sending approval request to resident
-  const handleSendApprovalRequest = async (newRequest) => {
-    setPendingRequests((prev) => [newRequest, ...prev]);
-    try {
-      await apiCreateVisitorRequest(newRequest);
-    } catch (e) {}
-  };
-
-  // Direct Visitor Entry (Replacing Manual Paper Writing at the Gate)
+  // Guard logs a new visitor entry (Replacing manual paper register)
   const handleDirectVisitorEntry = async (data) => {
     const newVisitor = {
       id: 'v-' + Date.now(),
@@ -282,310 +97,90 @@ export default function App() {
       purpose: data.purpose,
       vehicle: data.vehicle,
     };
+
+    // Optimistically add to currently inside list
     setActiveVisitors((prev) => [newVisitor, ...prev]);
-    setRecentActivity((prev) => [
-      {
-        id: 'act-' + Date.now(),
-        name: data.name,
-        role: data.category ? data.category.charAt(0).toUpperCase() + data.category.slice(1) : 'Visitor',
-        category: data.category || 'guest',
-        time: 'Just now',
-        gate: 'Main Gate 1',
-        action: 'Entered Society Gate',
-        status: 'approved',
-      },
-      ...prev,
-    ]);
 
     try {
       await apiLogVisitorEntry(data);
-    } catch (e) {}
-
-    Alert.alert(
-      'Entry Logged in Register! ✅',
-      `${data.name} entry recorded for Flat ${data.flat} at Main Gate 1.`
-    );
+      Alert.alert(
+        'Entry Saved to Register! ✅',
+        `${data.name} entry recorded for Flat ${data.flat}. Stored permanently to database.`
+      );
+    } catch (e) {
+      Alert.alert('Entry Saved Locally ✅', `${data.name} logged for Flat ${data.flat}.`);
+    }
   };
 
-  // Handle Guard checking out visitor
+  // Guard checks out visitor upon exit
   const handleCheckOutVisitor = async (id) => {
     const target = activeVisitors.find((v) => v.id === id);
     setActiveVisitors((prev) => prev.filter((v) => v.id !== id));
 
-    if (target) {
-      setRecentActivity((prev) => [
-        {
-          id: 'act-' + Date.now(),
-          name: target.name,
-          role: 'Visitor',
-          category: 'guest',
-          time: 'Just now',
-          gate: 'Gate 1',
-          action: 'Checked Out',
-          status: 'completed',
-        },
-        ...prev,
-      ]);
-      try {
-        await apiCheckOutVisitor(id);
-      } catch (e) {}
-      Alert.alert('Checked Out', `${target.name} has exited the premises.`);
+    try {
+      await apiCheckOutVisitor(id);
+      Alert.alert('Checked Out 🚪', `${target?.name || 'Visitor'} departed campus.`);
+    } catch (e) {
+      Alert.alert('Checked Out 🚪', 'Visitor marked as departed.');
     }
   };
 
-  // Pre-approve pass creation handler
-  const handleCreatePass = async (passData) => {
-    setActionModalVisible(false);
-    setCurrentQRPass(passData);
-    setQrModalVisible(true);
+  // Secondary intercom call to resident
+  const handleSendApprovalRequest = async (newRequest) => {
     try {
-      await apiCreatePass(passData);
-    } catch (e) {}
+      await apiCreateVisitorRequest(newRequest);
+      Alert.alert('Intercom Ringing 📞', `Connecting to Flat ${newRequest.flat}...`);
+    } catch (e) {
+      Alert.alert('Calling Flat 📞', `Intercom ringing at Flat ${newRequest.flat}.`);
+    }
   };
-
-  // If not logged in, show Login Screen (for Resident & Security Staff)
-  if (!currentUser) {
-    return (
-      <LoginScreen
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          setRole(user.role || 'resident');
-        }}
-      />
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
+      <StatusBar barStyle="light-content" backgroundColor="#0B132B" />
 
-      {/* Top Header with GatePass Logo, Mode Switcher, User Info & Logout */}
-      <Header
-        role={role}
-        onToggleRole={handleToggleRole}
-        pendingCount={pendingRequests.length}
-        backendConnected={backendConnected}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenDevTools={() => setDevToolsVisible(true)}
-        onOpenNotifications={() => {
-          Alert.alert(
-            'GatePass Notifications',
-            pendingRequests.length > 0
-              ? `You have ${pendingRequests.length} visitor(s) waiting at the gate.`
-              : 'No pending approvals right now.'
-          );
-        }}
-      />
+      {/* Top Security Station Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require('./assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
 
-      {/* Main Body */}
-      <View style={styles.body}>
-        {role === 'admin' ? (
-          <AdminHome
-            pendingRequests={pendingRequests}
-            activeVisitors={activeVisitors}
-            onApproveRequest={handleApproveRequest}
-            onDenyRequest={handleDenyRequest}
-            onOpenSOS={() => {
-              setSosModalVisible(true);
-              apiTriggerSOS('General Emergency', 'Estate Management Office').catch(() => {});
-            }}
-            onOpenHelpdesk={() => setHelpdeskVisible(true)}
-            onOpenVehicleFinder={() => setVehicleFinderVisible(true)}
-            currentUser={currentUser}
+        <View style={styles.headerRight}>
+          <View style={styles.dutyPill}>
+            <View style={styles.greenPulseDot} />
+            <Text style={styles.dutyPillText}>DUTY ACTIVE</Text>
+          </View>
+          <View
+            style={[
+              styles.syncDot,
+              { backgroundColor: backendConnected ? '#10B981' : '#F59E0B' },
+            ]}
           />
-        ) : role === 'guard' ? (
-          <GuardHome
-            onSendApprovalRequest={handleSendApprovalRequest}
-            onDirectVisitorEntry={handleDirectVisitorEntry}
-            activeVisitors={activeVisitors}
-            onCheckOutVisitor={handleCheckOutVisitor}
-          />
-        ) : (
-          <>
-            {activeTab === 'home' && (
-              <ResidentHome
-                pendingRequests={pendingRequests}
-                recentActivity={recentActivity}
-                onApproveRequest={handleApproveRequest}
-                onDenyRequest={handleDenyRequest}
-                onQuickAction={(type) => {
-                  setActionType(type);
-                  setActionModalVisible(true);
-                }}
-                onOpenSOS={() => {
-                  setSosModalVisible(true);
-                  apiTriggerSOS('General Emergency').catch(() => {});
-                }}
-                onOpenQRModal={(pass) => {
-                  setCurrentQRPass(pass);
-                  setQrModalVisible(true);
-                }}
-                onOpenHelpdesk={() => setHelpdeskVisible(true)}
-                onOpenVehicleFinder={() => setVehicleFinderVisible(true)}
-                onSelectPendingForCall={(req) => setIntercomRequest(req)}
-              />
-            )}
-            {activeTab === 'staff' && <StaffTab />}
-            {activeTab === 'amenities' && <AmenitiesTab />}
-            {activeTab === 'maintenance' && <MaintenanceTab />}
-          </>
-        )}
+        </View>
       </View>
 
-      {/* Resident Bottom Navigation Bar (Hidden in Guard Desk mode) */}
-      {role === 'resident' && (
-        <View style={styles.bottomNav}>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => setActiveTab('home')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'home' ? 'shield' : 'shield-outline'}
-              size={22}
-              color={activeTab === 'home' ? colors.secondary : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.navText,
-                activeTab === 'home' && styles.navTextActive,
-              ]}
-            >
-              Security
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => setActiveTab('staff')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'staff' ? 'people' : 'people-outline'}
-              size={22}
-              color={activeTab === 'staff' ? colors.secondary : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.navText,
-                activeTab === 'staff' && styles.navTextActive,
-              ]}
-            >
-              Staff
-            </Text>
-          </TouchableOpacity>
-
-          {/* Center GatePass Floating Action Button */}
-          <TouchableOpacity
-            style={styles.centerFab}
-            onPress={() => {
-              setActionType('guest');
-              setActionModalVisible(true);
-            }}
-            activeOpacity={0.85}
-          >
-            <View style={styles.centerFabInner}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
-            </View>
-            <Text style={styles.centerFabText}>Pass</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => setActiveTab('amenities')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'amenities' ? 'grid' : 'grid-outline'}
-              size={22}
-              color={activeTab === 'amenities' ? colors.secondary : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.navText,
-                activeTab === 'amenities' && styles.navTextActive,
-              ]}
-            >
-              Amenities
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => setActiveTab('maintenance')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={activeTab === 'maintenance' ? 'receipt' : 'receipt-outline'}
-              size={22}
-              color={activeTab === 'maintenance' ? colors.secondary : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.navText,
-                activeTab === 'maintenance' && styles.navTextActive,
-              ]}
-            >
-              Pay Dues
-            </Text>
-          </TouchableOpacity>
+      {/* Security Gate Terminal Sub-Header */}
+      <View style={styles.subHeader}>
+        <View style={styles.subHeaderLeft}>
+          <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+          <Text style={styles.subHeaderTitle}>MAIN GATE #1 • SECURITY DESK</Text>
         </View>
-      )}
+        <Text style={styles.officerName}>Officer Rajesh Kumar</Text>
+      </View>
 
-      {/* Modals */}
-      <QuickActionModal
-        visible={actionModalVisible}
-        actionType={actionType}
-        onClose={() => setActionModalVisible(false)}
-        onCreatePass={handleCreatePass}
-      />
-
-      <QRPassModal
-        visible={qrModalVisible}
-        passData={currentQRPass}
-        onClose={() => setQrModalVisible(false)}
-      />
-
-      <SOSModal
-        visible={sosModalVisible}
-        onClose={() => setSosModalVisible(false)}
-        onTriggerAlert={(item) => {
-          apiTriggerSOS(item.label).catch(() => {});
-        }}
-      />
-
-      {/* Intercom CCTV Video Call Modal */}
-      <IntercomCallModal
-        visible={!!intercomRequest}
-        request={intercomRequest}
-        onApprove={(id) => handleApproveRequest(id, false)}
-        onDeny={(id) => handleDenyRequest(id)}
-        onLeaveAtGate={(id) => handleApproveRequest(id, true)}
-      />
-
-      {/* Helpdesk / Maintenance Ticketing Modal */}
-      <HelpdeskModal
-        visible={helpdeskVisible}
-        tickets={tickets}
-        onClose={() => setHelpdeskVisible(false)}
-        onAddTicket={(newT) => setTickets((prev) => [newT, ...prev])}
-      />
-
-      {/* Find Vehicle Owner Modal */}
-      <VehicleFinderModal
-        visible={vehicleFinderVisible}
-        vehicles={registeredVehicles}
-        onClose={() => setVehicleFinderVisible(false)}
-      />
-
-      {/* Full-Stack Developer Sandbox Modal */}
-      <DevToolsModal
-        visible={devToolsVisible}
-        onClose={() => setDevToolsVisible(false)}
-        backendConnected={backendConnected}
-        currentUser={currentUser}
-      />
+      {/* Main Security Desk Entry Register */}
+      <View style={styles.body}>
+        <GuardHome
+          onDirectVisitorEntry={handleDirectVisitorEntry}
+          activeVisitors={activeVisitors}
+          onCheckOutVisitor={handleCheckOutVisitor}
+          onSendApprovalRequest={handleSendApprovalRequest}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -593,66 +188,87 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.primaryDark,
+    backgroundColor: '#0B132B',
+  },
+  header: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 140,
+    height: 38,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dutyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  greenPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  dutyPillText: {
+    color: '#34D399',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  subHeader: {
+    backgroundColor: '#111827',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+  },
+  subHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  subHeaderTitle: {
+    color: '#E2E8F0',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  officerName: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
   },
   body: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E8EDF5',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 3,
-    flex: 1,
-  },
-  navText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  navTextActive: {
-    color: colors.secondary,
-    fontWeight: '700',
-  },
-  centerFab: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -20,
-    flex: 1,
-  },
-  centerFabInner: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  centerFabText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.secondary,
-    marginTop: 2,
+    backgroundColor: '#F8FAFC',
   },
 });
