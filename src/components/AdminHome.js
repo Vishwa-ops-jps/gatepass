@@ -10,22 +10,29 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { apiGetAdminOverview, apiTriggerSOS } from '../services/api';
+import {
+  apiGetAdminOverview,
+  apiOnboardResident,
+  apiDeleteResident,
+  apiTriggerSOS,
+} from '../services/api';
 
 const DEFAULT_FLATS = [
-  { flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-05-MM-9214' },
-  { flat: 'A-104', block: 'A', floor: '1st', owner: 'Pooja Malhotra', phone: '9811122233', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-03-MG-4120' },
-  { flat: 'C-201', block: 'C', floor: '2nd', owner: 'Dr. Alok Verma', phone: '9822233445', status: 'Occupied', dues: 'Paid', vehicle: 'KA-51-AB-8800' },
-  { flat: 'A-101', block: 'A', floor: '1st', owner: 'Suresh Raina', phone: '9811100223', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-EE-3312' },
-  { flat: 'A-202', block: 'A', floor: '2nd', owner: 'Meera Sen', phone: '9844001122', status: 'Occupied', dues: 'Paid', vehicle: 'KA-04-FF-1199' },
-  { flat: 'B-101', block: 'B', floor: '1st', owner: 'Kunal Kapoor', phone: '9877002211', status: 'Occupied', dues: 'Paid', vehicle: 'KA-02-HH-7788' },
-  { flat: 'B-201', block: 'B', floor: '2nd', owner: 'R. K. Gupta', phone: '9833004455', status: 'Occupied', dues: 'Paid', vehicle: 'KA-05-JK-9911' },
-  { flat: 'C-101', block: 'C', floor: '1st', owner: 'Ananya Roy', phone: '9822005566', status: 'Occupied', dues: 'Paid', vehicle: 'KA-03-LK-4433' },
-  { flat: 'D-301', block: 'D', floor: '3rd', owner: 'T. N. Seshan', phone: '9811998877', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-MM-5566' },
-  { flat: 'D-404', block: 'D', floor: '4th', owner: 'Vacant (For Sale)', phone: '-', status: 'Vacant', dues: 'None', vehicle: 'None' },
+  { id: 'flat-B402', flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', email: 'vishwa@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Unpaid', duesAmount: 4250, vehicle: 'KA-05-MM-9214' },
+  { id: 'flat-A104', flat: 'A-104', block: 'A', floor: '1st', owner: 'Pooja Malhotra', phone: '9811122233', email: 'pooja@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Unpaid', duesAmount: 3600, vehicle: 'KA-03-MG-4120' },
+  { id: 'flat-C201', flat: 'C-201', block: 'C', floor: '2nd', owner: 'Dr. Alok Verma', phone: '9822233445', email: 'alok@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4100, vehicle: 'KA-51-AB-8800' },
+  { id: 'flat-A101', flat: 'A-101', block: 'A', floor: '1st', owner: 'Suresh Raina', phone: '9811100223', email: 'suresh@residence.com', status: 'Occupied', ownershipType: 'Tenant', dues: 'Paid', duesAmount: 3600, vehicle: 'KA-01-EE-3312' },
+  { id: 'flat-A202', flat: 'A-202', block: 'A', floor: '2nd', owner: 'Meera Sen', phone: '9844001122', email: 'meera@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 3800, vehicle: 'KA-04-FF-1199' },
+  { id: 'flat-B101', flat: 'B-101', block: 'B', floor: '1st', owner: 'Kunal Kapoor', phone: '9877002211', email: 'kunal@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4250, vehicle: 'KA-02-HH-7788' },
+  { id: 'flat-B201', flat: 'B-201', block: 'B', floor: '2nd', owner: 'R. K. Gupta', phone: '9833004455', email: 'rkgupta@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4250, vehicle: 'KA-05-JK-9911' },
+  { id: 'flat-C101', flat: 'C-101', block: 'C', floor: '1st', owner: 'Ananya Roy', phone: '9822005566', email: 'ananya@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4100, vehicle: 'KA-03-LK-4433' },
+  { id: 'flat-D301', flat: 'D-301', block: 'D', floor: '3rd', owner: 'T. N. Seshan', phone: '9811998877', email: 'seshan@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4500, vehicle: 'KA-01-MM-5566' },
+  { id: 'flat-D404', flat: 'D-404', block: 'D', floor: '4th', owner: 'Vacant (For Sale)', phone: '-', email: '', status: 'Vacant', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 0, vehicle: 'None' },
 ];
 
 const GUARDS_ROSTER = [
@@ -44,7 +51,7 @@ export default function AdminHome({
   onOpenVehicleFinder,
   currentUser,
 }) {
-  const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'visitors' | 'finances' | 'guards'
+  const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'visitors' | 'guards'
   const [flats, setFlats] = useState(DEFAULT_FLATS);
   const [searchQuery, setSearchQuery] = useState('');
   const [blockFilter, setBlockFilter] = useState('ALL');
@@ -56,6 +63,19 @@ export default function AdminHome({
     totalPending: 28450,
   });
 
+  // Onboarding Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newFlatNo, setNewFlatNo] = useState('');
+  const [newBlock, setNewBlock] = useState('B');
+  const [newFloor, setNewFloor] = useState('3rd');
+  const [newOwnerName, setNewOwnerName] = useState('');
+  const [newOwnerPhone, setNewOwnerPhone] = useState('');
+  const [newOwnerEmail, setNewOwnerEmail] = useState('');
+  const [newOwnershipType, setNewOwnershipType] = useState('Owner Occupied');
+  const [newVehicle, setNewVehicle] = useState('');
+  const [newDuesAmount, setNewDuesAmount] = useState('4250');
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -63,10 +83,10 @@ export default function AdminHome({
       if (data && data.flats) {
         setFlats(data.flats);
         setStats({
-          totalFlats: data.totalFlats || 48,
-          occupiedFlats: data.occupiedFlats || 42,
-          totalCollected: data.totalCollected || 156800,
-          totalPending: data.totalPending || 28450,
+          totalFlats: data.totalFlats || Math.max(48, data.flats.length),
+          occupiedFlats: data.occupiedFlats || data.flats.filter((f) => f.status === 'Occupied').length,
+          totalCollected: data.finance?.totalCollected || 156800,
+          totalPending: data.finance?.totalPending || 28450,
         });
       }
     } catch (e) {
@@ -112,21 +132,123 @@ export default function AdminHome({
     Alert.prompt
       ? Alert.prompt(
           'Broadcast Society Notice',
-          'Send emergency or general announcement to all 48 flat owners:',
+          'Send emergency or general announcement to all flat owners:',
           [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Broadcast',
               onPress: (text) =>
-                Alert.alert('Broadcast Sent', `Notice delivered to all 48 resident flats: "${text || 'Urgent Notice from Society Admin'}"`),
+                Alert.alert('Broadcast Sent', `Notice delivered to resident units: "${text || 'Urgent Notice from Society Admin'}"`),
             },
           ]
         )
       : Alert.alert(
           'Society Announcement',
-          'Broadcasting to all 48 flats: "Water tank cleaning scheduled for tomorrow 10 AM - 2 PM."',
+          'Broadcasting to all registered flats: "Water tank cleaning scheduled for tomorrow 10 AM - 2 PM."',
           [{ text: 'OK' }]
         );
+  };
+
+  // Submit Onboard Resident Form
+  const handleOnboardResident = async () => {
+    const flatClean = newFlatNo.trim().toUpperCase();
+    const ownerClean = newOwnerName.trim();
+    const phoneClean = newOwnerPhone.trim();
+
+    if (!flatClean) {
+      Alert.alert('Required', 'Please enter Flat Number (e.g. B-501 or A-302)');
+      return;
+    }
+    if (!ownerClean) {
+      Alert.alert('Required', 'Please enter Resident Owner Full Name');
+      return;
+    }
+    if (!phoneClean || phoneClean.length < 10) {
+      Alert.alert('Required', 'Please enter valid 10-digit registered mobile number');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await apiOnboardResident({
+        flat: flatClean,
+        block: newBlock,
+        floor: newFloor,
+        owner: ownerClean,
+        phone: phoneClean,
+        email: newOwnerEmail.trim(),
+        ownershipType: newOwnershipType,
+        vehicle: newVehicle.trim().toUpperCase() || 'None',
+        duesAmount: Number(newDuesAmount) || 4250,
+        status: 'Occupied',
+        dues: 'Unpaid',
+      });
+
+      setSubmitting(false);
+      setModalVisible(false);
+
+      // Reset Form
+      setNewFlatNo('');
+      setNewOwnerName('');
+      setNewOwnerPhone('');
+      setNewOwnerEmail('');
+      setNewVehicle('');
+
+      // Refresh list
+      loadData();
+
+      Alert.alert(
+        'Resident Owner Onboarded! 🎉',
+        `Flat ${flatClean} has been registered to ${ownerClean}.\n\nThe resident can now log in using:\n• Flat: ${flatClean}\n• Phone: ${phoneClean}`
+      );
+    } catch (err) {
+      setSubmitting(false);
+      // Fallback local addition if offline
+      const newEntry = {
+        id: 'flat-' + flatClean,
+        flat: flatClean,
+        block: newBlock,
+        floor: newFloor,
+        owner: ownerClean,
+        phone: phoneClean,
+        email: newOwnerEmail,
+        status: 'Occupied',
+        ownershipType: newOwnershipType,
+        dues: 'Unpaid',
+        duesAmount: Number(newDuesAmount) || 4250,
+        vehicle: newVehicle || 'None',
+      };
+      setFlats((prev) => [newEntry, ...prev]);
+      setModalVisible(false);
+      Alert.alert(
+        'Resident Registered',
+        `Flat ${flatClean} (${ownerClean}) registered to society directory.\nResident login: ${flatClean} / ${phoneClean}`
+      );
+    }
+  };
+
+  // Delete / Offboard Resident
+  const handleDeleteResident = (flatNo, owner) => {
+    Alert.alert(
+      'Offboard Resident Unit',
+      `Are you sure you want to remove ${owner} (Flat ${flatNo}) from the society registry? The resident will no longer be able to log in.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiDeleteResident(flatNo);
+              setFlats((prev) => prev.filter((f) => f.flat !== flatNo));
+              Alert.alert('Unit Removed', `Flat ${flatNo} has been removed from the registry.`);
+            } catch (e) {
+              setFlats((prev) => prev.filter((f) => f.flat !== flatNo));
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -149,13 +271,22 @@ export default function AdminHome({
             </View>
             <Text style={styles.heroTitle}>Emerald Heights Residency</Text>
             <Text style={styles.heroSubtitle}>
-              Estate Administrator: {currentUser?.name || 'Col. R. S. Rathore'} • 48 Flats Central Control
+              Estate Administrator: {currentUser?.name || 'Col. R. S. Rathore'} • {stats.totalFlats} Flats Central Control
             </Text>
           </View>
         </View>
 
         {/* Quick Admin Actions Row */}
         <View style={styles.adminActionRow}>
+          <TouchableOpacity
+            style={[styles.adminBtn, { backgroundColor: '#2563EB', borderColor: '#3B82F6' }]}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="person-add" size={15} color="#FFFFFF" />
+            <Text style={[styles.adminBtnText, { color: '#FFFFFF', fontWeight: '800' }]}>+ Add Resident</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.adminBtn} onPress={handleBroadcastAnnouncement} activeOpacity={0.8}>
             <Ionicons name="megaphone" size={15} color="#38BDF8" />
             <Text style={styles.adminBtnText}>Broadcast Notice</Text>
@@ -191,7 +322,7 @@ export default function AdminHome({
           </View>
           <Text style={styles.metricValue}>{stats.totalFlats}</Text>
           <Text style={styles.metricSub}>
-            <Text style={{ color: colors.success, fontWeight: '700' }}>{stats.occupiedFlats} Occupied</Text> • 6 Vacant
+            <Text style={{ color: colors.success, fontWeight: '700' }}>{stats.occupiedFlats} Occupied</Text> • {stats.totalFlats - stats.occupiedFlats} Vacant
           </Text>
         </View>
 
@@ -273,15 +404,31 @@ export default function AdminHome({
         </TouchableOpacity>
       </View>
 
-      {/* 4. Tab 1: All 48 Flats Directory */}
+      {/* 4. Tab 1: All Flats Directory */}
       {activeTab === 'directory' && (
         <View style={styles.sectionContainer}>
+          {/* Header Row with Add Resident Button */}
+          <View style={styles.directoryHeaderRow}>
+            <View>
+              <Text style={styles.sectionTitle}>Apartment Units & Residents</Text>
+              <Text style={styles.sectionSub}>Only registered residents can log in to their flat</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.onboardPillBtn}
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
+              <Text style={styles.onboardPillBtnText}>Onboard Resident</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Search Box */}
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by Flat #, Owner name, Phone, or Car plate..."
+              placeholder="Search Flat # (e.g. B-402), Owner Name, or Phone..."
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -332,11 +479,11 @@ export default function AdminHome({
                           item.dues === 'Paid' ? styles.duesTextPaid : styles.duesTextUnpaid,
                         ]}
                       >
-                        {item.dues === 'Paid' ? 'Dues Paid' : 'Unpaid (₹4,250)'}
+                        {item.dues === 'Paid' ? 'Dues Paid' : `Unpaid (₹${item.duesAmount || 4250})`}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '700' }}>
-                      {item.status}
+                      {item.ownershipType || 'Owner Occupied'}
                     </Text>
                   </View>
                 </View>
@@ -348,11 +495,16 @@ export default function AdminHome({
                     <Text style={styles.ownerPhone}>
                       <Ionicons name="call-outline" size={12} color={colors.textMuted} /> {item.phone}
                     </Text>
+                    {item.email ? (
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>
+                        <Ionicons name="mail-outline" size={10} color="#64748B" /> {item.email}
+                      </Text>
+                    ) : null}
                   </View>
 
                   <View style={styles.vehicleBox}>
                     <Ionicons name="car-outline" size={14} color="#FBBF24" />
-                    <Text style={styles.vehiclePlate}>{item.vehicle}</Text>
+                    <Text style={styles.vehiclePlate}>{item.vehicle || 'No Car'}</Text>
                   </View>
                 </View>
 
@@ -377,6 +529,15 @@ export default function AdminHome({
                       <Text style={[styles.flatActionBtnText, { color: colors.danger }]}>Remind Dues</Text>
                     </TouchableOpacity>
                   )}
+
+                  <TouchableOpacity
+                    style={[styles.flatActionBtn, { borderColor: 'rgba(239, 68, 68, 0.25)', backgroundColor: 'rgba(239, 68, 68, 0.08)' }]}
+                    onPress={() => handleDeleteResident(item.flat, item.owner)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={13} color="#F87171" />
+                    <Text style={[styles.flatActionBtnText, { color: '#F87171' }]}>Remove</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             ))}
@@ -481,6 +642,161 @@ export default function AdminHome({
           ))}
         </View>
       )}
+
+      {/* 7. Modal: Onboard New Resident Owner */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalBox}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Onboard Resident Owner</Text>
+                <Text style={styles.modalSubtitle}>Register apartment unit to grant resident access</Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 440 }}>
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Flat Number *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. B-501 or A-302"
+                  placeholderTextColor={colors.textMuted}
+                  value={newFlatNo}
+                  onChangeText={setNewFlatNo}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Block / Wing *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Block B"
+                    placeholderTextColor={colors.textMuted}
+                    value={newBlock}
+                    onChangeText={setNewBlock}
+                  />
+                </View>
+
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Floor</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="3rd Floor"
+                    placeholderTextColor={colors.textMuted}
+                    value={newFloor}
+                    onChangeText={setNewFloor}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Resident Owner Full Name *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. Rohan Sharma"
+                  placeholderTextColor={colors.textMuted}
+                  value={newOwnerName}
+                  onChangeText={setNewOwnerName}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Registered Mobile Number (Login Key) *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. 9812345678"
+                  placeholderTextColor={colors.textMuted}
+                  value={newOwnerPhone}
+                  onChangeText={setNewOwnerPhone}
+                  keyboardType="phone-pad"
+                />
+                <Text style={{ fontSize: 10, color: '#38BDF8', marginTop: 2 }}>
+                  * The resident will use this phone number + flat number to log in.
+                </Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Email Address (Invoicing & Passes)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="e.g. rohan@gmail.com"
+                  placeholderTextColor={colors.textMuted}
+                  value={newOwnerEmail}
+                  onChangeText={setNewOwnerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Ownership Type</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Owner Occupied / Tenant"
+                    placeholderTextColor={colors.textMuted}
+                    value={newOwnershipType}
+                    onChangeText={setNewOwnershipType}
+                  />
+                </View>
+
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>Car Plate #</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="e.g. KA-04-AB-1234"
+                    placeholderTextColor={colors.textMuted}
+                    value={newVehicle}
+                    onChangeText={setNewVehicle}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Monthly Maintenance Fee (₹)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="4250"
+                  placeholderTextColor={colors.textMuted}
+                  value={newDuesAmount}
+                  onChangeText={setNewDuesAmount}
+                  keyboardType="numeric"
+                />
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalSubmitBtn}
+              onPress={handleOnboardResident}
+              disabled={submitting}
+              activeOpacity={0.8}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done-circle" size={18} color="#FFFFFF" />
+                  <Text style={styles.modalSubmitBtnText}>Register Flat & Create Login</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -568,9 +884,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    flexWrap: 'wrap',
   },
   adminBtn: {
     flex: 1,
+    minWidth: '28%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -652,6 +970,25 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     gap: 12,
+  },
+  directoryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  onboardPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  onboardPillBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   searchBar: {
     flexDirection: 'row',
@@ -948,6 +1285,84 @@ const styles = StyleSheet.create({
   guardCallText: {
     fontSize: 12,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Modal Styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalBox: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#0A1C3C',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    paddingBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  modalSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  formGroup: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: '#071533',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  modalSubmitBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 13,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  modalSubmitBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
 });

@@ -759,8 +759,13 @@
           <!-- Admin Specific Flat Directory (Shown when role === 'admin') -->
           <div class="panel" id="adminFlatsPanel" style="display: none;">
             <div class="panel-header">
-              <div class="panel-title"><i class="fa-solid fa-building"></i> Society Flats & Resident Directory (48 Flats)</div>
-              <span class="panel-action" onclick="loadAdminOverview()">Refresh Directory</span>
+              <div class="panel-title"><i class="fa-solid fa-building"></i> Society Flats & Resident Directory (<span id="adminFlatsCount">48</span> Flats)</div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-act btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick="openOnboardModal()">
+                  <i class="fa-solid fa-user-plus"></i> + Onboard Resident Owner
+                </button>
+                <span class="panel-action" onclick="loadAdminOverview()" style="padding: 6px 10px;">Refresh</span>
+              </div>
             </div>
             <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
               <input type="text" id="adminFlatSearchInput" placeholder="Search flat # (e.g. B-402), resident name, phone, or car..." onkeyup="filterAdminFlats(this.value)" class="input-field" style="flex: 1; min-width: 220px;">
@@ -1285,6 +1290,82 @@
     </div>
   </div>
 
+  <!-- 8. ONBOARD RESIDENT OWNER MODAL (SOCIETY ADMIN) -->
+  <div class="modal-backdrop" id="onboardResidentModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 18px; font-weight: 900; color: #FFF;">Onboard Resident Owner</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Register apartment flat & create resident login credentials</div>
+        </div>
+        <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 18px;" onclick="closeModal('onboardResidentModal')"></i>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1.2;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Flat Number *</label>
+            <input type="text" id="obFlat" placeholder="e.g. B-501 or A-302" class="input-field" style="text-transform: uppercase;">
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Block / Wing *</label>
+            <select id="obBlock" class="input-field" style="background: #071533;">
+              <option value="A">Block A</option>
+              <option value="B" selected>Block B</option>
+              <option value="C">Block C</option>
+              <option value="D">Block D</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Floor</label>
+            <input type="text" id="obFloor" placeholder="e.g. 5th" value="5th" class="input-field">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Resident Owner Full Name *</label>
+          <input type="text" id="obOwner" placeholder="e.g. Rohan Sharma" class="input-field">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Registered Mobile Number (Login Key) *</label>
+          <input type="text" id="obPhone" placeholder="e.g. 9812345678" class="input-field">
+          <div style="font-size: 10px; color: var(--accent); margin-top: 2px;">
+            * The resident will enter this mobile number and flat number to log in.
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Email Address (Digital Invoicing & Passes)</label>
+          <input type="email" id="obEmail" placeholder="e.g. rohan@gmail.com" class="input-field">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Ownership Type</label>
+            <select id="obOwnershipType" class="input-field" style="background: #071533;">
+              <option value="Owner Occupied" selected>Owner Occupied</option>
+              <option value="Tenant">Tenant / Rented</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Car Plate #</label>
+            <input type="text" id="obVehicle" placeholder="e.g. KA-04-AB-1234" class="input-field" style="text-transform: uppercase;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Monthly Maintenance Assessment (₹)</label>
+          <input type="number" id="obDues" placeholder="4250" value="4250" class="input-field">
+        </div>
+
+        <button class="btn-act btn-primary" style="justify-content: center; padding: 13px; font-size: 13px; margin-top: 4px;" onclick="submitOnboardResident()">
+          <i class="fa-solid fa-circle-check"></i> Register Unit & Activate Resident Login
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== CLIENT JAVASCRIPT ==================== -->
   <script>
     // Current Authenticated User State
@@ -1377,6 +1458,10 @@
         }
       } else if (event === 'EMERGENCY_TRIGGERED') {
         alert('🚨 SECURITY EMERGENCY BROADCAST!\n' + data.type + ' reported at ' + data.flat);
+      } else if (event === 'RESIDENT_ONBOARDED' || event === 'RESIDENT_UPDATED' || event === 'RESIDENT_DELETED') {
+        if (currentUser.role === 'admin') {
+          loadAdminOverview();
+        }
       }
     }
 
@@ -1747,6 +1832,9 @@
         const data = await fetch('/api/admin/overview').then(r => r.json());
         if (data && data.flats) {
           allAdminFlats = data.flats;
+          if (document.getElementById('adminFlatsCount')) {
+            document.getElementById('adminFlatsCount').textContent = allAdminFlats.length;
+          }
           filterAdminFlats(document.getElementById('adminFlatSearchInput')?.value || '');
         }
       } catch(e) {}
@@ -1765,14 +1853,19 @@
           <td style="font-weight: 700; color: #FFF;">${f.owner}</td>
           <td><a href="tel:${f.phone}" style="color: var(--accent); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${f.phone}</a></td>
           <td>
-            <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: ${f.dues === 'Paid' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(239, 68, 68, 0.2); color: #F87171;'}">${f.dues === 'Paid' ? 'Paid' : 'Unpaid (₹4,250)'}</span>
+            <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: ${f.dues === 'Paid' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(239, 68, 68, 0.2); color: #F87171;'}">${f.dues === 'Paid' ? 'Paid' : 'Unpaid (₹' + (f.duesAmount || 4250) + ')'}</span>
           </td>
           <td style="color: #F59E0B; font-weight: 700;">${f.vehicle}</td>
           <td><span style="color: ${f.status === 'Occupied' ? '#34D399' : '#94A3B8'}; font-weight: 700;">${f.status}</span></td>
           <td>
-            <button class="btn-act btn-primary" style="padding: 4px 8px; font-size: 10px;" onclick="alert('Dialing resident of Flat ${f.flat}: ${f.phone}')">
-              <i class="fa-solid fa-phone"></i> Call
-            </button>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn-act btn-primary" style="padding: 4px 8px; font-size: 10px;" onclick="alert('Dialing resident of Flat ${f.flat}: ${f.phone}')">
+                <i class="fa-solid fa-phone"></i> Call
+              </button>
+              <button class="btn-act btn-deny" style="padding: 4px 8px; font-size: 10px;" onclick="deleteAdminFlat('${f.flat}', '${f.owner.replace(/'/g, "\\'")}')">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `).join('');
@@ -1787,6 +1880,74 @@
         return matchesBlock && matchesSearch;
       });
       renderAdminFlatsTable(filtered);
+    }
+
+    function openOnboardModal() {
+      document.getElementById('obFlat').value = '';
+      document.getElementById('obOwner').value = '';
+      document.getElementById('obPhone').value = '';
+      document.getElementById('obEmail').value = '';
+      document.getElementById('obVehicle').value = '';
+      openModal('onboardResidentModal');
+    }
+
+    async function submitOnboardResident() {
+      const flat = document.getElementById('obFlat').value.trim().toUpperCase();
+      const block = document.getElementById('obBlock').value;
+      const floor = document.getElementById('obFloor').value.trim();
+      const owner = document.getElementById('obOwner').value.trim();
+      const phone = document.getElementById('obPhone').value.trim();
+      const email = document.getElementById('obEmail').value.trim();
+      const ownershipType = document.getElementById('obOwnershipType').value;
+      const vehicle = document.getElementById('obVehicle').value.trim().toUpperCase() || 'None';
+      const duesAmount = document.getElementById('obDues').value.trim() || '4250';
+
+      if (!flat || !owner || !phone) {
+        return alert('Please fill in Flat Number, Resident Owner Name, and Registered Phone Number.');
+      }
+
+      try {
+        const res = await fetch('/api/admin/residents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            flat,
+            block,
+            floor,
+            owner,
+            phone,
+            email,
+            ownershipType,
+            vehicle,
+            duesAmount,
+            status: 'Occupied'
+          })
+        }).then(r => r.json());
+
+        if (res.success) {
+          closeModal('onboardResidentModal');
+          alert(`Resident Owner Onboarded Successfully! 🎉\n\nFlat: ${flat}\nOwner: ${owner}\nLogin Mobile: ${phone}\n\nThe resident can now log in using Flat ${flat} and Mobile ${phone}.`);
+          loadAdminOverview();
+        } else {
+          alert(res.error || 'Could not onboard resident.');
+        }
+      } catch (err) {
+        alert('Error connecting to society server.');
+      }
+    }
+
+    async function deleteAdminFlat(flatNo, owner) {
+      if (confirm(`Are you sure you want to remove ${owner} (Flat ${flatNo}) from the society directory?\n\nThe resident owner will no longer be able to log in.`)) {
+        try {
+          const res = await fetch(`/api/admin/residents/${encodeURIComponent(flatNo)}`, { method: 'DELETE' }).then(r => r.json());
+          if (res.success) {
+            alert(`Unit ${flatNo} has been removed.`);
+            loadAdminOverview();
+          }
+        } catch (e) {
+          alert('Could not remove unit.');
+        }
+      }
     }
 
     // Guard Walk-In Visitor Registration

@@ -85,18 +85,16 @@ export default function LoginScreen({ onLoginSuccess }) {
       setLoading(false);
       if (res && res.user) {
         onLoginSuccess(res.user);
+      } else {
+        Alert.alert('Registration Required', res.error || 'This flat is not registered.');
       }
     } catch (err) {
-      // Fallback offline login
       setLoading(false);
-      onLoginSuccess({
-        id: 'res-1',
-        name: 'Vishwa (Resident Owner)',
-        phone: phone,
-        role: 'resident',
-        flat: flat.toUpperCase(),
-        society: 'Emerald Heights Residency',
-      });
+      Alert.alert(
+        'Registration Required 🏢',
+        err.message ||
+          `Flat ${flat.toUpperCase()} with mobile ${phone} is not registered in the society database.\n\nPlease contact your Society Admin to register your apartment unit.`
+      );
     }
   };
 

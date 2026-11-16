@@ -185,3 +185,26 @@ export async function apiGetHelpdeskTickets(flat = null) {
   const query = flat ? `?flat=${encodeURIComponent(flat)}` : '';
   return await apiRequest(`/helpdesk${query}`);
 }
+
+// 12. Society Admin: Onboard New Resident Owner & Unit
+export async function apiOnboardResident(data) {
+  return await apiRequest('/admin/residents', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// 13. Society Admin: Update Resident Details
+export async function apiUpdateResident(id, data) {
+  return await apiRequest(`/admin/residents/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// 14. Society Admin: Delete / Offboard Resident
+export async function apiDeleteResident(id) {
+  return await apiRequest(`/admin/residents/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}

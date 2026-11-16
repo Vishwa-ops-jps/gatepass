@@ -1,14 +1,32 @@
+const fs = require('fs');
+const path = require('path');
 const { MongoClient } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB_NAME || 'gatepass';
+const LOCAL_DB_PATH = path.join(__dirname, 'data', 'gatepass_db.json');
 
 let client = null;
 let database = null;
 let isMongo = false;
 
-// In-Memory Storage Engine (Used when MONGODB_URI is not configured)
+// Initial Seed Data for Flats & Residents
+const INITIAL_FLATS = [
+  { id: 'flat-B402', flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', email: 'vishwa@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Unpaid', duesAmount: 4250, vehicle: 'KA-05-MM-9214', intercom: '402', membersCount: 3, created_at: new Date().toISOString() },
+  { id: 'flat-A104', flat: 'A-104', block: 'A', floor: '1st', owner: 'Pooja Malhotra', phone: '9811122233', email: 'pooja@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Unpaid', duesAmount: 3600, vehicle: 'KA-03-MG-4120', intercom: '104', membersCount: 2, created_at: new Date().toISOString() },
+  { id: 'flat-C201', flat: 'C-201', block: 'C', floor: '2nd', owner: 'Dr. Alok Verma', phone: '9822233445', email: 'alok@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4100, vehicle: 'KA-51-AB-8800', intercom: '201', membersCount: 4, created_at: new Date().toISOString() },
+  { id: 'flat-A101', flat: 'A-101', block: 'A', floor: '1st', owner: 'Suresh Raina', phone: '9811100223', email: 'suresh@residence.com', status: 'Occupied', ownershipType: 'Tenant', dues: 'Paid', duesAmount: 3600, vehicle: 'KA-01-EE-3312', intercom: '101', membersCount: 3, created_at: new Date().toISOString() },
+  { id: 'flat-A202', flat: 'A-202', block: 'A', floor: '2nd', owner: 'Meera Sen', phone: '9844001122', email: 'meera@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 3800, vehicle: 'KA-04-FF-1199', intercom: '202', membersCount: 2, created_at: new Date().toISOString() },
+  { id: 'flat-B101', flat: 'B-101', block: 'B', floor: '1st', owner: 'Kunal Kapoor', phone: '9877002211', email: 'kunal@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4250, vehicle: 'KA-02-HH-7788', intercom: '101', membersCount: 4, created_at: new Date().toISOString() },
+  { id: 'flat-B201', flat: 'B-201', block: 'B', floor: '2nd', owner: 'R. K. Gupta', phone: '9833004455', email: 'rkgupta@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4250, vehicle: 'KA-05-JK-9911', intercom: '201', membersCount: 3, created_at: new Date().toISOString() },
+  { id: 'flat-C101', flat: 'C-101', block: 'C', floor: '1st', owner: 'Ananya Roy', phone: '9822005566', email: 'ananya@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4100, vehicle: 'KA-03-LK-4433', intercom: '101', membersCount: 2, created_at: new Date().toISOString() },
+  { id: 'flat-D301', flat: 'D-301', block: 'D', floor: '3rd', owner: 'T. N. Seshan', phone: '9811998877', email: 'seshan@residence.com', status: 'Occupied', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 4500, vehicle: 'KA-01-MM-5566', intercom: '301', membersCount: 2, created_at: new Date().toISOString() },
+  { id: 'flat-D404', flat: 'D-404', block: 'D', floor: '4th', owner: 'Vacant (For Sale)', phone: '-', email: '', status: 'Vacant', ownershipType: 'Owner Occupied', dues: 'Paid', duesAmount: 0, vehicle: 'None', intercom: '404', membersCount: 0, created_at: new Date().toISOString() },
+];
+
+// In-Memory Storage Engine (Auto-saves to server/data/gatepass_db.json when running locally)
 const memStore = {
+  flats: [...INITIAL_FLATS],
   users: [
     { id: 'admin-1', name: 'Col. R. S. Rathore (Estate Admin)', phone: '9899900001', email: 'admin@gatepass.com', role: 'admin', password: 'admin123', badge_id: 'ADMIN-01', society: 'Emerald Heights Residency' },
     { id: 'res-1', name: 'Vishwa (Resident Owner)', phone: '9876543210', email: 'vishwa@residence.com', role: 'resident', flat: 'B-402', society: 'Emerald Heights Residency' },
@@ -62,6 +80,36 @@ const memStore = {
 
 const collections = Object.keys(memStore);
 
+// Local JSON File Persistence
+function saveToFile() {
+  if (isMongo) return;
+  try {
+    fs.mkdirSync(path.dirname(LOCAL_DB_PATH), { recursive: true });
+    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(memStore, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[GatePass Database] Could not persist to local JSON file:', err.message);
+  }
+}
+
+function loadFromFile() {
+  if (isMongo) return;
+  try {
+    if (fs.existsSync(LOCAL_DB_PATH)) {
+      const data = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf8'));
+      for (const k of collections) {
+        if (Array.isArray(data[k])) {
+          memStore[k] = data[k];
+        }
+      }
+      console.log(`[GatePass Database] Successfully loaded persistent local database (${memStore.flats.length} flats, ${memStore.users.length} users).`);
+    } else {
+      saveToFile();
+    }
+  } catch (err) {
+    console.warn('[GatePass Database] Error loading local JSON file, using in-memory defaults:', err.message);
+  }
+}
+
 async function initSchema() {
   if (uri) {
     try {
@@ -82,6 +130,7 @@ async function initSchema() {
       await Promise.all([
         database.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true }),
         database.collection('users').createIndex({ role: 1, flat: 1 }),
+        database.collection('flats').createIndex({ flat: 1 }, { unique: true }),
         database.collection('users').createIndex({ badge_id: 1 }, { sparse: true }),
         database.collection('visitors').createIndex({ status: 1, flat: 1, created_at: -1 }),
         database.collection('passes').createIndex({ code: 1 }, { unique: true }),
@@ -107,11 +156,14 @@ async function initSchema() {
     }
   }
 
-  console.log('[GatePass Database] Running with Built-in High-Performance Storage Engine (Zero external dependencies).');
+  loadFromFile();
+  console.log('[GatePass Database] Running with Persistent Built-in Storage Engine (File: server/data/gatepass_db.json)');
 }
 
 const col = (name) => (database ? database.collection(name) : null);
 const cleanFlat = (flat) => (flat || '').trim().toUpperCase();
+const cleanPhone = (phone) => (phone || '').replace(/\D/g, '');
+
 const withoutMongoId = (doc) => {
   if (!doc) return doc;
   const { _id, ...rest } = doc;
@@ -128,42 +180,203 @@ const DB = {
 
   getDatabaseInfo() {
     return {
-      type: isMongo ? 'MongoDB Atlas Cloud Database' : 'Built-in High-Speed Engine (Persistent & Pre-seeded)',
+      type: isMongo ? 'MongoDB Atlas Cloud Database' : 'Built-in High-Speed Engine (Persistent File Storage: server/data/gatepass_db.json)',
       connected: true,
       isCloud: isMongo,
-      databaseName: isMongo ? dbName : 'gatepass-internal',
+      databaseName: isMongo ? dbName : 'gatepass_db.json',
+      totalFlats: isMongo ? 'Dynamic' : memStore.flats.length,
       tables: collections,
       timestamp: new Date().toISOString(),
     };
   },
 
-  async resetDatabase() {
+  // ==================== FLATS & RESIDENT MANAGEMENT ====================
+  async getAllFlats() {
     if (isMongo) {
-      await Promise.all(collections.map((name) => col(name).deleteMany({})));
-      await initSchema();
+      return many(col('flats').find({}).sort({ flat: 1 }));
+    }
+    return [...memStore.flats];
+  },
+
+  async getFlatByNumber(flat) {
+    const cFlat = cleanFlat(flat);
+    if (isMongo) {
+      return withoutMongoId(await col('flats').findOne({ flat: cFlat }));
+    }
+    return memStore.flats.find((f) => cleanFlat(f.flat) === cFlat) || null;
+  },
+
+  async getResidentByFlatAndPhone(flat, phone) {
+    const cFlat = cleanFlat(flat);
+    const digits = cleanPhone(phone);
+    if (!cFlat || !digits) return null;
+
+    if (isMongo) {
+      // 1. Check flats collection
+      const flatDoc = await col('flats').findOne({
+        flat: cFlat,
+        phone: { $regex: digits },
+      });
+      if (flatDoc) return withoutMongoId(flatDoc);
+
+      // 2. Check users collection
+      const userDoc = await col('users').findOne({
+        role: 'resident',
+        flat: cFlat,
+        phone: { $regex: digits },
+      });
+      return withoutMongoId(userDoc);
+    }
+
+    // In-Memory / File store check
+    const flatMatch = memStore.flats.find((f) => {
+      if (cleanFlat(f.flat) !== cFlat) return false;
+      const fPhone = cleanPhone(f.phone);
+      return fPhone.includes(digits) || digits.includes(fPhone);
+    });
+    if (flatMatch) return flatMatch;
+
+    return memStore.users.find((u) => {
+      if (u.role !== 'resident' || cleanFlat(u.flat) !== cFlat) return false;
+      const uPhone = cleanPhone(u.phone);
+      return uPhone.includes(digits) || digits.includes(uPhone);
+    }) || null;
+  },
+
+  // Society Admin: Onboard a New Resident Owner & Unit
+  async addFlatResident(data) {
+    const cFlat = cleanFlat(data.flat);
+    if (!cFlat) throw new Error('Flat Number is required');
+    if (!data.phone) throw new Error('Registered Phone Number is required');
+    if (!data.owner) throw new Error('Resident Owner Name is required');
+
+    const flatId = 'flat-' + cFlat.replace(/[^a-zA-Z0-9]/g, '');
+    const userId = 'res-' + cFlat.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
+
+    const flatDoc = {
+      id: flatId,
+      flat: cFlat,
+      block: (data.block || cFlat.split('-')[0] || 'A').toUpperCase(),
+      floor: data.floor || '1st',
+      owner: data.owner.trim(),
+      phone: data.phone.trim(),
+      email: (data.email || '').trim().toLowerCase(),
+      status: data.status || 'Occupied',
+      ownershipType: data.ownershipType || 'Owner Occupied',
+      dues: data.dues || 'Unpaid',
+      duesAmount: Number(data.duesAmount) || 4250,
+      vehicle: (data.vehicle || 'None').trim().toUpperCase(),
+      intercom: data.intercom || cFlat.replace(/\D/g, ''),
+      membersCount: Number(data.membersCount) || 2,
+      created_at: new Date().toISOString(),
+    };
+
+    const userDoc = {
+      id: userId,
+      name: `${flatDoc.owner} (Resident Owner)`,
+      phone: flatDoc.phone,
+      email: flatDoc.email || `${cFlat.toLowerCase()}@emeraldresidence.com`,
+      role: 'resident',
+      flat: cFlat,
+      society: 'Emerald Heights Residency',
+      ownershipType: flatDoc.ownershipType,
+      created_at: new Date().toISOString(),
+    };
+
+    const billDoc = {
+      id: 'bill-' + cFlat.toLowerCase(),
+      flat: cFlat,
+      month: 'November 2026',
+      due_date: '15 Nov 2026',
+      amount: flatDoc.duesAmount,
+      status: flatDoc.dues,
+      created_at: new Date(),
+    };
+
+    if (isMongo) {
+      await col('flats').updateOne({ flat: cFlat }, { $set: flatDoc }, { upsert: true });
+      await col('users').updateOne({ flat: cFlat, role: 'resident' }, { $set: userDoc }, { upsert: true });
+      await col('maintenance_bills').updateOne({ flat: cFlat }, { $set: billDoc }, { upsert: true });
     } else {
-      // In-memory reset
-      memStore.visitors = memStore.visitors.slice(0, 3);
-      memStore.activity_logs = memStore.activity_logs.slice(0, 5);
-      memStore.passes = memStore.passes.slice(0, 2);
+      // Upsert in memStore
+      const existingFlatIdx = memStore.flats.findIndex((f) => cleanFlat(f.flat) === cFlat);
+      if (existingFlatIdx >= 0) {
+        memStore.flats[existingFlatIdx] = { ...memStore.flats[existingFlatIdx], ...flatDoc };
+      } else {
+        memStore.flats.push(flatDoc);
+      }
+
+      const existingUserIdx = memStore.users.findIndex((u) => u.role === 'resident' && cleanFlat(u.flat) === cFlat);
+      if (existingUserIdx >= 0) {
+        memStore.users[existingUserIdx] = { ...memStore.users[existingUserIdx], ...userDoc };
+      } else {
+        memStore.users.push(userDoc);
+      }
+
+      const existingBillIdx = memStore.maintenance_bills.findIndex((b) => cleanFlat(b.flat) === cFlat);
+      if (existingBillIdx >= 0) {
+        memStore.maintenance_bills[existingBillIdx] = { ...memStore.maintenance_bills[existingBillIdx], ...billDoc };
+      } else {
+        memStore.maintenance_bills.push(billDoc);
+      }
+
+      saveToFile();
+    }
+
+    return flatDoc;
+  },
+
+  // Society Admin: Update Flat Resident Details
+  async updateFlatResident(idOrFlat, updateData) {
+    const cFlat = cleanFlat(idOrFlat);
+    if (isMongo) {
+      await col('flats').updateOne(
+        { $or: [{ id: idOrFlat }, { flat: cFlat }] },
+        { $set: { ...updateData, updated_at: new Date().toISOString() } }
+      );
+      if (updateData.owner || updateData.phone || updateData.email) {
+        await col('users').updateOne(
+          { flat: cFlat, role: 'resident' },
+          {
+            $set: {
+              ...(updateData.owner ? { name: `${updateData.owner} (Resident Owner)` } : {}),
+              ...(updateData.phone ? { phone: updateData.phone } : {}),
+              ...(updateData.email ? { email: updateData.email } : {}),
+            },
+          }
+        );
+      }
+    } else {
+      const idx = memStore.flats.findIndex((f) => f.id === idOrFlat || cleanFlat(f.flat) === cFlat);
+      if (idx >= 0) {
+        memStore.flats[idx] = { ...memStore.flats[idx], ...updateData, updated_at: new Date().toISOString() };
+        const uIdx = memStore.users.findIndex((u) => u.role === 'resident' && cleanFlat(u.flat) === cFlat);
+        if (uIdx >= 0) {
+          if (updateData.owner) memStore.users[uIdx].name = `${updateData.owner} (Resident Owner)`;
+          if (updateData.phone) memStore.users[uIdx].phone = updateData.phone;
+          if (updateData.email) memStore.users[uIdx].email = updateData.email;
+        }
+        saveToFile();
+      }
     }
   },
 
-  async getUserByPhoneAndFlat(phone, flat) {
-    const cleanPhone = (phone || '').replace(/\D/g, '');
-    const cFlat = cleanFlat(flat);
+  // Society Admin: Delete / Offboard Flat Resident
+  async deleteFlatResident(idOrFlat) {
+    const cFlat = cleanFlat(idOrFlat);
     if (isMongo) {
-      return withoutMongoId(
-        await col('users').findOne({
-          role: 'resident',
-          flat: cFlat,
-          phone: { $regex: cleanPhone },
-        })
-      );
+      await col('flats').deleteOne({ $or: [{ id: idOrFlat }, { flat: cFlat }] });
+      await col('users').deleteMany({ flat: cFlat, role: 'resident' });
+    } else {
+      memStore.flats = memStore.flats.filter((f) => f.id !== idOrFlat && cleanFlat(f.flat) !== cFlat);
+      memStore.users = memStore.users.filter((u) => !(u.role === 'resident' && cleanFlat(u.flat) === cFlat));
+      saveToFile();
     }
-    return memStore.users.find(
-      (u) => u.role === 'resident' && u.flat === cFlat && (u.phone.includes(cleanPhone) || cleanPhone.includes(u.phone))
-    ) || null;
+  },
+
+  // ==================== AUTH & USER QUERIES ====================
+  async getUserByPhoneAndFlat(phone, flat) {
+    return await this.getResidentByFlatAndPhone(flat, phone);
   },
 
   async getUserByBadgeOrPhone(value) {
@@ -210,65 +423,98 @@ const DB = {
     };
   },
 
-  async getPendingRequests(flat) {
+  // ==================== VISITOR REQUESTS ====================
+  async getPendingRequests(flat = null) {
     const cFlat = flat ? cleanFlat(flat) : null;
     if (isMongo) {
       return many(
         col('visitors')
-          .find({ status: 'pending', ...(cFlat ? { flat: cFlat } : {}) })
+          .find(cFlat ? { status: 'pending', flat: cFlat } : { status: 'pending' })
           .sort({ created_at: -1 })
       );
     }
-    return memStore.visitors.filter(
-      (v) => v.status === 'pending' && (!cFlat || cleanFlat(v.flat) === cFlat)
-    );
+    return memStore.visitors.filter((v) => v.status === 'pending' && (!cFlat || cleanFlat(v.flat) === cFlat));
   },
 
-  async getActiveVisitors(flat) {
+  async getActiveVisitors(flat = null) {
     const cFlat = flat ? cleanFlat(flat) : null;
     if (isMongo) {
       return many(
         col('visitors')
-          .find({ status: 'approved', ...(cFlat ? { flat: cFlat } : {}) })
+          .find(cFlat ? { status: 'approved', flat: cFlat } : { status: 'approved' })
           .sort({ created_at: -1 })
       );
     }
-    return memStore.visitors.filter(
-      (v) => (v.status === 'approved' || v.status === 'inside') && (!cFlat || cleanFlat(v.flat) === cFlat)
-    );
+    return memStore.visitors.filter((v) => v.status === 'approved' && (!cFlat || cleanFlat(v.flat) === cFlat));
   },
 
-  async getVisitorById(id) {
-    if (isMongo) return withoutMongoId(await col('visitors').findOne({ id }));
-    return memStore.visitors.find((v) => v.id === id) || null;
-  },
-
-  async insertVisitor(visitor) {
-    const doc = { ...visitor, created_at: new Date() };
+  async insertRequest(request) {
+    const doc = {
+      ...request,
+      id: 'req-' + Date.now(),
+      status: 'pending',
+      created_at: new Date(),
+    };
     if (isMongo) {
       await col('visitors').insertOne(doc);
     } else {
       memStore.visitors.unshift(doc);
+      saveToFile();
     }
+    return doc;
   },
 
-  async updateVisitorStatus(id, status, inTime, outTime) {
+  async getRequestById(id) {
+    if (isMongo) return withoutMongoId(await col('visitors').findOne({ id }));
+    return memStore.visitors.find((v) => v.id === id) || null;
+  },
+
+  async approveRequest(id, leaveAtGate = false) {
+    const inTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     if (isMongo) {
-      const update = { status };
-      if (inTime) update.in_time = inTime;
-      if (outTime) update.out_time = outTime;
-      await col('visitors').updateOne({ id }, { $set: update });
+      await col('visitors').updateOne(
+        { id },
+        { $set: { status: 'approved', leave_at_gate: leaveAtGate ? 1 : 0, in_time: inTime } }
+      );
     } else {
       const v = memStore.visitors.find((x) => x.id === id);
       if (v) {
-        v.status = status;
-        if (inTime) v.in_time = inTime;
-        if (outTime) v.out_time = outTime;
+        v.status = 'approved';
+        v.leave_at_gate = leaveAtGate ? 1 : 0;
+        v.in_time = inTime;
+        saveToFile();
       }
     }
   },
 
-  async getPasses(flat) {
+  async denyRequest(id) {
+    if (isMongo) {
+      await col('visitors').updateOne({ id }, { $set: { status: 'denied', out_time: new Date() } });
+    } else {
+      const v = memStore.visitors.find((x) => x.id === id);
+      if (v) {
+        v.status = 'denied';
+        v.out_time = new Date();
+        saveToFile();
+      }
+    }
+  },
+
+  async checkoutVisitor(id) {
+    if (isMongo) {
+      await col('visitors').updateOne({ id }, { $set: { status: 'checked_out', out_time: new Date() } });
+    } else {
+      const v = memStore.visitors.find((x) => x.id === id);
+      if (v) {
+        v.status = 'checked_out';
+        v.out_time = new Date();
+        saveToFile();
+      }
+    }
+  },
+
+  // ==================== PASSES ====================
+  async getPasses(flat = null) {
     const cFlat = flat ? cleanFlat(flat) : null;
     if (isMongo) {
       return many(col('passes').find(cFlat ? { flat: cFlat } : {}).sort({ created_at: -1 }));
@@ -276,27 +522,49 @@ const DB = {
     return memStore.passes.filter((p) => !cFlat || cleanFlat(p.flat) === cFlat);
   },
 
-  async getPassByCode(code) {
-    const cCode = (code || '').trim().toUpperCase();
-    if (isMongo) return withoutMongoId(await col('passes').findOne({ code: cCode }));
-    return memStore.passes.find((p) => p.code.toUpperCase() === cCode) || null;
-  },
-
   async insertPass(pass) {
-    const doc = { ...pass, created_at: new Date(), is_used: false };
+    const doc = { ...pass, created_at: new Date() };
     if (isMongo) {
       await col('passes').insertOne(doc);
     } else {
       memStore.passes.unshift(doc);
+      saveToFile();
     }
+    return doc;
   },
 
-  async getActivityLogs(flat) {
+  async verifyPass(code) {
+    const cCode = (code || '').trim().toUpperCase();
+    if (isMongo) {
+      const pass = await col('passes').findOne({ code: cCode, is_used: { $ne: true } });
+      if (pass) {
+        await col('passes').updateOne({ code: cCode }, { $set: { is_used: true, used_at: new Date() } });
+        return withoutMongoId(pass);
+      }
+      return null;
+    }
+    const p = memStore.passes.find((x) => x.code === cCode && !x.is_used);
+    if (p) {
+      p.is_used = true;
+      p.used_at = new Date();
+      saveToFile();
+      return p;
+    }
+    return null;
+  },
+
+  // ==================== ACTIVITY & HELPDESK ====================
+  async getActivityLogs(flat = null) {
     const cFlat = flat ? cleanFlat(flat) : null;
     if (isMongo) {
-      return many(col('activity_logs').find(cFlat ? { flat: cFlat } : {}).sort({ created_at: -1 }).limit(50));
+      return many(
+        col('activity_logs')
+          .find(cFlat ? { flat: cFlat } : {})
+          .sort({ created_at: -1 })
+          .limit(30)
+      );
     }
-    return memStore.activity_logs.filter((a) => !cFlat || cleanFlat(a.flat) === cFlat).slice(0, 50);
+    return memStore.activity_logs.filter((a) => !cFlat || cleanFlat(a.flat) === cFlat).slice(0, 30);
   },
 
   async insertActivity(activity) {
@@ -305,6 +573,7 @@ const DB = {
       await col('activity_logs').insertOne(doc);
     } else {
       memStore.activity_logs.unshift(doc);
+      saveToFile();
     }
   },
 
@@ -321,6 +590,7 @@ const DB = {
       await col('helpdesk_tickets').insertOne(ticket);
     } else {
       memStore.helpdesk_tickets.unshift(ticket);
+      saveToFile();
     }
   },
 
@@ -334,6 +604,7 @@ const DB = {
     return memStore.amenities;
   },
 
+  // ==================== MAINTENANCE ====================
   async getMaintenanceBill(flat = 'B-402') {
     const cFlat = cleanFlat(flat);
     if (isMongo) {
@@ -366,6 +637,10 @@ const DB = {
         { flat: cFlat },
         { $set: { status: 'Paid', txn_id: txnId, paid_at: new Date() } }
       );
+      await col('flats').updateOne(
+        { flat: cFlat },
+        { $set: { dues: 'Paid' } }
+      );
     } else {
       const b = memStore.maintenance_bills.find((x) => cleanFlat(x.flat) === cFlat);
       if (b) {
@@ -373,6 +648,11 @@ const DB = {
         b.txn_id = txnId;
         b.paid_at = new Date();
       }
+      const f = memStore.flats.find((x) => cleanFlat(x.flat) === cFlat);
+      if (f) {
+        f.dues = 'Paid';
+      }
+      saveToFile();
     }
   },
 
@@ -382,6 +662,7 @@ const DB = {
       await col('emergencies').insertOne(doc);
     } else {
       memStore.emergencies.unshift(doc);
+      saveToFile();
     }
   },
 

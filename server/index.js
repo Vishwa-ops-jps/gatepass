@@ -164,25 +164,21 @@ app.post('/api/auth/login', async (req, res) => {
     return res.json({
       success: true,
       user: {
-        ...resident,
+        id: resident.id || 'res-' + userFlat,
+        name: resident.owner || resident.name || `Resident Owner (${userFlat})`,
+        phone: resident.phone || userPhone,
+        email: resident.email || '',
+        role: 'resident',
         flat: userFlat,
+        society: 'Emerald Heights Residency',
         token: 'gp_res_' + Date.now(),
       },
     });
   }
 
-  // Auto-allow valid flat format (e.g. B-402, A-104, C-201) with entered phone number
-  return res.json({
-    success: true,
-    user: {
-      id: 'res-' + Date.now(),
-      name: `Resident Owner (${userFlat})`,
-      phone: userPhone,
-      role: 'resident',
-      flat: userFlat,
-      society: 'Emerald Heights Residency',
-      token: 'gp_res_' + Date.now(),
-    },
+  // Strictly enforce that only registered resident owners onboarded by Admin can log in
+  return res.status(401).json({
+    error: `Flat ${userFlat} with phone ${userPhone} is not registered in the society directory. Only resident owners registered by the Society Admin can access their unit. Please contact Emerald Heights Estate Management or onboard this unit in Admin Command Center.`,
   });
 });
 
@@ -462,7 +458,8 @@ app.post('/api/maintenance/pay', async (req, res) => {
 
 // 10. Admin Overview & Society Directory
 app.get('/api/admin/overview', async (req, res) => {
-  const [activeVisitors, pendingRequests, allBills, tickets, staff, activities] = await Promise.all([
+  const [flats, activeVisitors, pendingRequests, allBills, tickets, staff, activities] = await Promise.all([
+    DB.getAllFlats(),
     DB.getActiveVisitors(),
     DB.getPendingRequests(),
     DB.getAllMaintenanceBills(),
@@ -471,30 +468,17 @@ app.get('/api/admin/overview', async (req, res) => {
     DB.getActivityLogs(),
   ]);
 
-  const flats = [
-    { flat: 'B-402', block: 'B', floor: '4th', owner: 'Vishwa (Resident Owner)', phone: '9876543210', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-05-MM-9214' },
-    { flat: 'A-104', block: 'A', floor: '1st', owner: 'Pooja Malhotra', phone: '9811122233', status: 'Occupied', dues: 'Unpaid', vehicle: 'KA-03-MG-4120' },
-    { flat: 'C-201', block: 'C', floor: '2nd', owner: 'Dr. Alok Verma', phone: '9822233445', status: 'Occupied', dues: 'Paid', vehicle: 'KA-51-AB-8800' },
-    { flat: 'A-101', block: 'A', floor: '1st', owner: 'Suresh Raina', phone: '9811100223', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-EE-3312' },
-    { flat: 'A-202', block: 'A', floor: '2nd', owner: 'Meera Sen', phone: '9844001122', status: 'Occupied', dues: 'Paid', vehicle: 'KA-04-FF-1199' },
-    { flat: 'B-101', block: 'B', floor: '1st', owner: 'Kunal Kapoor', phone: '9877002211', status: 'Occupied', dues: 'Paid', vehicle: 'KA-02-HH-7788' },
-    { flat: 'B-201', block: 'B', floor: '2nd', owner: 'R. K. Gupta', phone: '9833004455', status: 'Occupied', dues: 'Paid', vehicle: 'KA-05-JK-9911' },
-    { flat: 'C-101', block: 'C', floor: '1st', owner: 'Ananya Roy', phone: '9822005566', status: 'Occupied', dues: 'Paid', vehicle: 'KA-03-LK-4433' },
-    { flat: 'D-301', block: 'D', floor: '3rd', owner: 'T. N. Seshan', phone: '9811998877', status: 'Occupied', dues: 'Paid', vehicle: 'KA-01-MM-5566' },
-    { flat: 'D-404', block: 'D', floor: '4th', owner: 'Vacant (For Sale)', phone: '-', status: 'Vacant', dues: 'None', vehicle: 'None' },
-  ];
-
-  const totalFlats = 48;
-  const occupiedFlats = 42;
-  const totalCollected = 156800;
-  const totalPending = 28450;
+  const totalFlats = Math.max(48, flats.length);
+  const occupiedFlats = flats.filter(f => f.status === 'Occupied').length;
+  const totalCollected = allBills.filter(b => b.status === 'Paid').reduce((sum, b) => sum + (b.amount || 0), 156800);
+  const totalPending = flats.filter(f => f.dues === 'Unpaid').reduce((sum, f) => sum + (f.duesAmount || 4250), 0) || 28450;
 
   res.json({
     society: 'Emerald Heights Residency',
     address: 'Survey 14, Outer Ring Road, Bellandur, Bengaluru',
     totalFlats,
     occupiedFlats,
-    occupancyRate: '87.5%',
+    occupancyRate: `${Math.round((occupiedFlats / totalFlats) * 100)}%`,
     activeVisitorsInside: activeVisitors.length,
     pendingGateRequests: pendingRequests.length,
     openTickets: tickets.filter(t => t.status !== 'Resolved').length,
@@ -510,6 +494,70 @@ app.get('/api/admin/overview', async (req, res) => {
     activeVisitors,
     tickets,
   });
+});
+
+// Society Admin: List all registered flats & resident owners
+app.get('/api/admin/residents', async (req, res) => {
+  const flats = await DB.getAllFlats();
+  res.json({ success: true, count: flats.length, flats });
+});
+
+// Society Admin: Onboard a New Resident Owner & Unit
+app.post('/api/admin/residents', async (req, res) => {
+  const { flat, block, floor, owner, phone, email, ownershipType, vehicle, duesAmount, status } = req.body;
+  if (!flat || !phone || !owner) {
+    return res.status(400).json({ error: 'Flat Number, Resident Owner Name, and Mobile Phone are required.' });
+  }
+
+  try {
+    const newFlat = await DB.addFlatResident({
+      flat,
+      block,
+      floor,
+      owner,
+      phone,
+      email,
+      ownershipType,
+      vehicle,
+      duesAmount,
+      status,
+    });
+
+    // Broadcast WebSocket event so all connected Admin & Guard consoles update immediately
+    broadcast('RESIDENT_ONBOARDED', newFlat);
+
+    res.json({
+      success: true,
+      message: `Flat ${newFlat.flat} & Resident Owner ${newFlat.owner} successfully onboarded!`,
+      flat: newFlat,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Society Admin: Update Flat Resident Details
+app.put('/api/admin/residents/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await DB.updateFlatResident(id, req.body);
+    broadcast('RESIDENT_UPDATED', { id, ...req.body });
+    res.json({ success: true, message: 'Resident details updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Society Admin: Delete / Offboard Flat Resident
+app.delete('/api/admin/residents/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await DB.deleteFlatResident(id);
+    broadcast('RESIDENT_DELETED', { id });
+    res.json({ success: true, message: `Unit ${id} offboarded from society registry.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 10. Emergency SOS
