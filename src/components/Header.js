@@ -45,23 +45,31 @@ export default function Header({
           <TouchableOpacity
             style={[
               styles.roleBadge,
-              role === 'guard' ? styles.roleBadgeGuard : styles.roleBadgeResident,
+              role === 'admin'
+                ? styles.roleBadgeAdmin
+                : role === 'guard'
+                ? styles.roleBadgeGuard
+                : styles.roleBadgeResident,
             ]}
             onPress={onToggleRole}
             activeOpacity={0.8}
           >
             <Ionicons
-              name={role === 'guard' ? 'shield-checkmark' : 'home'}
+              name={role === 'admin' ? 'business' : role === 'guard' ? 'shield-checkmark' : 'home'}
               size={13}
-              color={role === 'guard' ? '#FFFFFF' : colors.primary}
+              color={role === 'resident' ? colors.primary : '#FFFFFF'}
             />
             <Text
               style={[
                 styles.roleBadgeText,
-                role === 'guard' ? styles.roleBadgeTextGuard : styles.roleBadgeTextResident,
+                role === 'admin'
+                  ? styles.roleBadgeTextAdmin
+                  : role === 'guard'
+                  ? styles.roleBadgeTextGuard
+                  : styles.roleBadgeTextResident,
               ]}
             >
-              {role === 'guard' ? 'Guard' : 'Resident'}
+              {role === 'admin' ? 'Admin' : role === 'guard' ? 'Guard' : 'Resident'}
             </Text>
           </TouchableOpacity>
 
@@ -95,14 +103,35 @@ export default function Header({
       {/* Community Location & User Info Strip */}
       <View style={styles.subBar}>
         <View style={styles.locationInfo}>
-          <Ionicons name="person-circle-outline" size={16} color="#CBD5E1" />
+          <Ionicons
+            name={role === 'admin' ? 'business-outline' : 'person-circle-outline'}
+            size={16}
+            color="#CBD5E1"
+          />
           <Text style={styles.societyName}>
-            {currentUser?.name || (role === 'guard' ? 'Rajesh Kumar (Guard)' : 'Vishwa')}
+            {currentUser?.name ||
+              (role === 'admin'
+                ? 'Col. R. S. Rathore (Admin)'
+                : role === 'guard'
+                ? 'Rajesh Kumar (Guard)'
+                : 'Vishwa')}
           </Text>
         </View>
-        <View style={styles.flatTag}>
-          <Text style={styles.flatText}>
-            {role === 'guard'
+        <View
+          style={[
+            styles.flatTag,
+            role === 'admin' && { backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: '#38BDF8', borderWidth: 1 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.flatText,
+              role === 'admin' && { color: '#38BDF8', fontWeight: '800' },
+            ]}
+          >
+            {role === 'admin'
+              ? 'Society Management Committee'
+              : role === 'guard'
               ? currentUser?.gate || 'Gate #1 Main Gate'
               : `Flat ${currentUser?.flat || 'B-402'}`}
           </Text>
@@ -181,6 +210,9 @@ const styles = StyleSheet.create({
   roleBadgeGuard: {
     backgroundColor: colors.secondary,
   },
+  roleBadgeAdmin: {
+    backgroundColor: '#0284C7',
+  },
   roleBadgeText: {
     fontSize: 12,
     fontWeight: '700',
@@ -189,6 +221,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   roleBadgeTextGuard: {
+    color: '#FFFFFF',
+  },
+  roleBadgeTextAdmin: {
     color: '#FFFFFF',
   },
   iconButton: {

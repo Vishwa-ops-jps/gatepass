@@ -168,9 +168,20 @@ export async function apiPayMaintenance() {
 }
 
 // 9. Emergency SOS
-export async function apiTriggerSOS(type) {
+export async function apiTriggerSOS(type, location = 'Estate Management Office') {
   return await apiRequest('/sos', {
     method: 'POST',
-    body: JSON.stringify({ type, flat: 'Flat B-402' }),
+    body: JSON.stringify({ type, flat: location }),
   });
+}
+
+// 10. Admin Overview & Society Directory
+export async function apiGetAdminOverview() {
+  return await apiRequest('/admin/overview');
+}
+
+// 11. Society Helpdesk Tickets
+export async function apiGetHelpdeskTickets(flat = null) {
+  const query = flat ? `?flat=${encodeURIComponent(flat)}` : '';
+  return await apiRequest(`/helpdesk${query}`);
 }

@@ -759,8 +759,19 @@
           <!-- Admin Specific Flat Directory (Shown when role === 'admin') -->
           <div class="panel" id="adminFlatsPanel" style="display: none;">
             <div class="panel-header">
-              <div class="panel-title"><i class="fa-solid fa-building"></i> Society Flats & Resident Directory</div>
+              <div class="panel-title"><i class="fa-solid fa-building"></i> Society Flats & Resident Directory (48 Flats)</div>
               <span class="panel-action" onclick="loadAdminOverview()">Refresh Directory</span>
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+              <input type="text" id="adminFlatSearchInput" placeholder="Search flat # (e.g. B-402), resident name, phone, or car..." onkeyup="filterAdminFlats(this.value)" class="input-field" style="flex: 1; min-width: 220px;">
+              <select id="adminBlockFilter" onchange="filterAdminFlats(document.getElementById('adminFlatSearchInput').value)" class="input-field" style="width: 140px; background: #071533;">
+                <option value="ALL">All Blocks</option>
+                <option value="A">Block A</option>
+                <option value="B">Block B</option>
+                <option value="C">Block C</option>
+                <option value="D">Block D</option>
+                <option value="UNPAID">⚠️ Unpaid Dues</option>
+              </select>
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table" id="adminFlatsTable">
@@ -772,6 +783,7 @@
                     <th>Maintenance</th>
                     <th>Vehicle Plate</th>
                     <th>Status</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="adminFlatsTbody">
@@ -1286,6 +1298,17 @@
       society: 'Emerald Heights Residency'
     };
 
+    // Load persisted login session from localStorage
+    try {
+      const savedUser = localStorage.getItem('gatepass_current_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && parsed.role) {
+          currentUser = parsed;
+        }
+      }
+    } catch(e) {}
+
     let pendingRequests = [];
     let recentActivity = [];
     let activeVisitors = [];
@@ -1304,6 +1327,11 @@
 
     ws.onopen = () => {
       document.getElementById('wsStatus').textContent = 'LIVE SYNC';
+      // Save current persona session to localStorage
+      try {
+        localStorage.setItem('gatepass_current_user', JSON.stringify(currentUser));
+      } catch(e) {}
+
       fetchInitialData();
     };
 
@@ -1405,9 +1433,20 @@
 
     function renderAll() {
       // Stats Bar Updates
-      document.getElementById('statPendingApprovals').textContent = pendingRequests.length;
+      if (currentUser.role === 'admin') {
+        document.getElementById('statPendingApprovals').textContent = '48';
+        document.getElementById('statLabel1').textContent = 'Total Society Flats';
+        document.getElementById('statInsideCampus').textContent = activeVisitors.length || 4;
+        document.getElementById('statLabel2').textContent = 'Inside Campus Now';
+        document.getElementById('statMaintenanceStatus').textContent = '₹1,56,800';
+        document.getElementById('statLabel3').textContent = 'Society Dues Collected';
+        document.getElementById('statSecurityStatus').textContent = '2 Gates';
+        document.getElementById('statLabel4').textContent = 'Security Protocol';
+      } else {
+        document.getElementById('statPendingApprovals').textContent = pendingRequests.length;
+        document.getElementById('statInsideCampus').textContent = activeVisitors.length;
+      }
       document.getElementById('pendingCountBadge').textContent = pendingRequests.length;
-      document.getElementById('statInsideCampus').textContent = activeVisitors.length;
       document.getElementById('activeCountBadge').textContent = activeVisitors.length + ' Visitors';
 
       // Pending Requests List
@@ -1443,7 +1482,21 @@
 
       // Phone Pending Section
       const phoneP = document.getElementById('phonePendingSection');
-      if (pendingRequests.length > 0) {
+      if (currentUser.role === 'admin') {
+        phoneP.innerHTML = `
+          <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid #38BDF8; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 11px; font-weight: 800; color: #38BDF8; display: flex; justify-content: space-between;">
+              <span><i class="fa-solid fa-building"></i> SOCIETY ADMIN CONSOLE</span>
+              <span>48 Flats</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #FFF; font-weight: 700;">
+              <div>Occupied: <span style="color: #34D399;">42 Flats</span></div>
+              <div>Collected: <span style="color: #FBBF24;">₹1,56,800</span></div>
+            </div>
+            <div style="font-size: 11px; color: #94A3B8;">Visitors Waiting: <strong>${pendingRequests.length}</strong> • Security: <strong>Active</strong></div>
+          </div>
+        `;
+      } else if (pendingRequests.length > 0) {
         phoneP.innerHTML = `
           <div style="background: rgba(255, 107, 0, 0.15); border: 1px solid var(--accent); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
             <div style="font-size: 11px; font-weight: 800; color: var(--accent); display: flex; justify-content: space-between;">
@@ -1555,6 +1608,11 @@
         document.getElementById('statLabel1').textContent = `Pending Gate Requests`;
         document.getElementById('statLabel3').textContent = `Total Dues: ₹28,450`;
       }
+
+      // Save current persona session to localStorage
+      try {
+        localStorage.setItem('gatepass_current_user', JSON.stringify(currentUser));
+      } catch(e) {}
 
       fetchInitialData();
     }
@@ -1683,25 +1741,52 @@
     }
 
     // Load Admin Overview Data
+    let allAdminFlats = [];
     async function loadAdminOverview() {
       try {
         const data = await fetch('/api/admin/overview').then(r => r.json());
-        if (data.flats) {
-          const tbody = document.getElementById('adminFlatsTbody');
-          tbody.innerHTML = data.flats.map(f => `
-            <tr>
-              <td><strong style="color: var(--accent);">${f.flat}</strong> (Block ${f.block})</td>
-              <td>${f.owner}</td>
-              <td style="color: var(--text-muted);">${f.phone}</td>
-              <td>
-                <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: ${f.dues === 'Paid' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(239, 68, 68, 0.2); color: #F87171;'}">${f.dues}</span>
-              </td>
-              <td style="color: #F59E0B; font-weight: 700;">${f.vehicle}</td>
-              <td><span style="color: ${f.status === 'Occupied' ? '#34D399' : '#94A3B8'}; font-weight: 700;">${f.status}</span></td>
-            </tr>
-          `).join('');
+        if (data && data.flats) {
+          allAdminFlats = data.flats;
+          filterAdminFlats(document.getElementById('adminFlatSearchInput')?.value || '');
         }
       } catch(e) {}
+    }
+
+    function renderAdminFlatsTable(flatsList) {
+      const tbody = document.getElementById('adminFlatsTbody');
+      if (!tbody) return;
+      if (!flatsList || flatsList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">No flats match your search or filter.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = flatsList.map(f => `
+        <tr>
+          <td><strong style="color: var(--accent); font-size: 14px;">${f.flat}</strong> <span style="font-size: 11px; color: var(--text-muted);">(Block ${f.block} • ${f.floor || 'Floor'})</span></td>
+          <td style="font-weight: 700; color: #FFF;">${f.owner}</td>
+          <td><a href="tel:${f.phone}" style="color: var(--accent); text-decoration: none;"><i class="fa-solid fa-phone"></i> ${f.phone}</a></td>
+          <td>
+            <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: ${f.dues === 'Paid' ? 'rgba(16, 185, 129, 0.2); color: #34D399;' : 'rgba(239, 68, 68, 0.2); color: #F87171;'}">${f.dues === 'Paid' ? 'Paid' : 'Unpaid (₹4,250)'}</span>
+          </td>
+          <td style="color: #F59E0B; font-weight: 700;">${f.vehicle}</td>
+          <td><span style="color: ${f.status === 'Occupied' ? '#34D399' : '#94A3B8'}; font-weight: 700;">${f.status}</span></td>
+          <td>
+            <button class="btn-act btn-primary" style="padding: 4px 8px; font-size: 10px;" onclick="alert('Dialing resident of Flat ${f.flat}: ${f.phone}')">
+              <i class="fa-solid fa-phone"></i> Call
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterAdminFlats(query) {
+      const q = (query || '').toLowerCase().trim();
+      const block = document.getElementById('adminBlockFilter')?.value || 'ALL';
+      const filtered = allAdminFlats.filter(f => {
+        const matchesBlock = block === 'ALL' || f.block === block || (block === 'UNPAID' && f.dues === 'Unpaid');
+        const matchesSearch = !q || f.flat.toLowerCase().includes(q) || f.owner.toLowerCase().includes(q) || f.phone.includes(q) || f.vehicle.toLowerCase().includes(q);
+        return matchesBlock && matchesSearch;
+      });
+      renderAdminFlatsTable(filtered);
     }
 
     // Guard Walk-In Visitor Registration

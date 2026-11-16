@@ -13,6 +13,7 @@ import { colors } from './src/theme/colors';
 import Header from './src/components/Header';
 import ResidentHome from './src/components/ResidentHome';
 import GuardHome from './src/components/GuardHome';
+import AdminHome from './src/components/AdminHome';
 import StaffTab from './src/components/StaffTab';
 import AmenitiesTab from './src/components/AmenitiesTab';
 import MaintenanceTab from './src/components/MaintenanceTab';
@@ -136,11 +137,23 @@ export default function App() {
     initWebSocket(handleWebSocketEvent);
   }, []);
 
-  // Toggle between Resident and Guard Desk mode
+  // Toggle between Resident, Guard Desk, and Society Admin mode
   const handleToggleRole = () => {
-    const nextRole = role === 'resident' ? 'guard' : 'resident';
+    let nextRole = 'resident';
+    if (role === 'resident') nextRole = 'guard';
+    else if (role === 'guard') nextRole = 'admin';
+    else nextRole = 'resident';
+
     setRole(nextRole);
-    if (nextRole === 'guard') {
+    if (nextRole === 'admin') {
+      setCurrentUser((prev) => ({
+        ...prev,
+        role: 'admin',
+        name: 'Col. R. S. Rathore (Admin)',
+        society: 'Emerald Heights Residency',
+        badge_id: 'ADMIN-01',
+      }));
+    } else if (nextRole === 'guard') {
       setCurrentUser((prev) => ({
         ...prev,
         role: 'guard',
@@ -322,7 +335,21 @@ export default function App() {
 
       {/* Main Body */}
       <View style={styles.body}>
-        {role === 'guard' ? (
+        {role === 'admin' ? (
+          <AdminHome
+            pendingRequests={pendingRequests}
+            activeVisitors={activeVisitors}
+            onApproveRequest={handleApproveRequest}
+            onDenyRequest={handleDenyRequest}
+            onOpenSOS={() => {
+              setSosModalVisible(true);
+              apiTriggerSOS('General Emergency', 'Estate Management Office').catch(() => {});
+            }}
+            onOpenHelpdesk={() => setHelpdeskVisible(true)}
+            onOpenVehicleFinder={() => setVehicleFinderVisible(true)}
+            currentUser={currentUser}
+          />
+        ) : role === 'guard' ? (
           <GuardHome
             onSendApprovalRequest={handleSendApprovalRequest}
             activeVisitors={activeVisitors}
