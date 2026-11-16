@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   roleBadgeAdmin: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#10B981',
   },
   roleBadgeText: {
     fontSize: 12,

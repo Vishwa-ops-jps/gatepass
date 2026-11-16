@@ -8,33 +8,43 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --primary: #0F2D6B;
-      --primary-dark: #071533;
-      --primary-light: #1E4DB7;
-      --accent: #FF6B00;
+      /* Sleek Obsidian & Charcoal Slate Theme (Linear / Vercel Enterprise Grade) */
+      --primary: #0F172A;
+      --primary-dark: #020617;
+      --primary-light: #1E293B;
+      --accent: #F97316;
       --accent-hover: #EA580C;
-      --accent-light: #FFA04D;
-      --bg-dark: #070F1E;
-      --card-bg: rgba(15, 29, 58, 0.75);
+      --accent-light: #FB923C;
+      --emerald: #10B981;
+      --emerald-dark: #059669;
+      --bg-dark: #0A0E17;
+      --card-bg: rgba(17, 24, 39, 0.88);
       --card-border: rgba(255, 255, 255, 0.08);
-      --card-hover: rgba(24, 45, 88, 0.85);
-      --text-main: #FFFFFF;
+      --card-hover: rgba(30, 41, 59, 0.95);
+      --text-main: #F8FAFC;
       --text-muted: #94A3B8;
       --text-sub: #CBD5E1;
       --success: #10B981;
       --danger: #EF4444;
       --warning: #F59E0B;
-      --info: #0284C7;
+      --info: #38BDF8;
       --sidebar-w: 240px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
-    body { background: var(--bg-dark); color: var(--text-main); min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
+    body {
+      background: radial-gradient(circle at 20% 10%, #151F32 0%, #0A0E17 60%, #07090E 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
 
     /* Glassmorphic Navbar */
     .navbar {
       height: 64px;
-      background: rgba(7, 15, 30, 0.9);
+      background: rgba(10, 14, 23, 0.94);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border);
@@ -119,6 +129,49 @@
     }
     .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+
+    /* Quick Persona Switcher Segmented Control */
+    .role-selector-bar {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .role-sel-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .role-sel-btn:hover {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .role-sel-btn.active-admin {
+      background: #10B981;
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+    }
+    .role-sel-btn.active-resident {
+      background: #F97316;
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.4);
+    }
+    .role-sel-btn.active-guard {
+      background: #0284C7;
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+    }
 
     /* Active User Persona Badge */
     .user-pill {
@@ -209,12 +262,15 @@
 
     /* Persona Banner */
     .persona-banner {
-      background: linear-gradient(135deg, rgba(15, 45, 107, 0.9) 0%, rgba(7, 21, 51, 0.95) 100%);
-      border: 1px solid rgba(255, 107, 0, 0.25);
+      background: linear-gradient(135deg, rgba(21, 31, 50, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 20px;
       padding: 20px 24px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
       justify-content: space-between;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
@@ -417,8 +473,8 @@
       padding: 20px;
     }
     .modal-box {
-      background: #0B1936;
-      border: 1px solid rgba(255, 107, 0, 0.3);
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 24px;
       width: 100%;
       max-width: 500px;
@@ -488,7 +544,7 @@
     .phone-screen {
       width: 380px;
       min-height: 740px;
-      background: #070F1E;
+      background: #0A0E17;
       border-radius: 46px;
       border: 10px solid #1E293B;
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.1);
@@ -555,6 +611,19 @@
       <div class="ws-badge">
         <div class="ws-dot"></div>
         <span id="wsStatus">LIVE SYNC</span>
+      </div>
+
+      <!-- Quick Persona Switcher Segmented Control -->
+      <div class="role-selector-bar" id="roleSelectorBar">
+        <button class="role-sel-btn active-admin" id="btnRoleAdmin" onclick="quickSwitchPersona('admin')" title="Switch to Society Admin Console">
+          <i class="fa-solid fa-user-tie"></i> <span>Society Admin</span>
+        </button>
+        <button class="role-sel-btn" id="btnRoleResident" onclick="quickSwitchPersona('resident')" title="Switch to Resident Owner Portal">
+          <i class="fa-solid fa-house-user"></i> <span>Resident B-402</span>
+        </button>
+        <button class="role-sel-btn" id="btnRoleGuard" onclick="quickSwitchPersona('guard')" title="Switch to Guard Gate Terminal">
+          <i class="fa-solid fa-shield-halved"></i> <span>Guard (Gate 1)</span>
+        </button>
       </div>
 
       <!-- User Role / Account Switcher Pill -->
@@ -769,7 +838,7 @@
             </div>
             <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
               <input type="text" id="adminFlatSearchInput" placeholder="Search flat # (e.g. B-402), resident name, phone, or car..." onkeyup="filterAdminFlats(this.value)" class="input-field" style="flex: 1; min-width: 220px;">
-              <select id="adminBlockFilter" onchange="filterAdminFlats(document.getElementById('adminFlatSearchInput').value)" class="input-field" style="width: 140px; background: #071533;">
+              <select id="adminBlockFilter" onchange="filterAdminFlats(document.getElementById('adminFlatSearchInput').value)" class="input-field" style="width: 140px; background: #111827;">
                 <option value="ALL">All Blocks</option>
                 <option value="A">Block A</option>
                 <option value="B">Block B</option>
@@ -1052,7 +1121,7 @@
 
         <div>
           <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Assigned Gate Duty</label>
-          <select id="loginGate" class="input-field" style="background: #071533;">
+          <select id="loginGate" class="input-field" style="background: #111827;">
             <option value="Main Gate #1">Main Gate #1 (Vehicle & Pedestrian Lane)</option>
             <option value="Service Gate #2">Service Gate #2 (Logistics & Deliveries)</option>
           </select>
@@ -1132,7 +1201,7 @@
 
         <div>
           <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Visitor Category</label>
-          <select id="walkInCategory" class="input-field" style="background: #071533;">
+          <select id="walkInCategory" class="input-field" style="background: #111827;">
             <option value="guest">Guest / Personal Visitor</option>
             <option value="delivery">Delivery Courier (Zomato/Swiggy/Amazon)</option>
             <option value="cab">Cab / Taxi Pickup (Uber/Ola)</option>
@@ -1238,7 +1307,7 @@
 
         <div>
           <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Category</label>
-          <select id="passType" class="input-field" style="background: #071533;">
+          <select id="passType" class="input-field" style="background: #111827;">
             <option value="guest">Guest / Personal Visitor</option>
             <option value="delivery">Delivery Partner (Swiggy/Zomato/Amazon)</option>
             <option value="cab">Cab / Taxi (Uber/Ola)</option>
@@ -1274,7 +1343,7 @@
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <input type="text" id="ticketTitle" placeholder="Complaint title (e.g. Water leakage, Corridor light)..." class="input-field">
-        <select id="ticketCategory" class="input-field" style="background: #071533;">
+        <select id="ticketCategory" class="input-field" style="background: #111827;">
           <option value="Electrical">Electrical</option>
           <option value="Plumbing">Plumbing</option>
           <option value="Housekeeping">Housekeeping</option>
@@ -1309,7 +1378,7 @@
           </div>
           <div style="flex: 1;">
             <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Block / Wing *</label>
-            <select id="obBlock" class="input-field" style="background: #071533;">
+            <select id="obBlock" class="input-field" style="background: #111827;">
               <option value="A">Block A</option>
               <option value="B" selected>Block B</option>
               <option value="C">Block C</option>
@@ -1343,7 +1412,7 @@
         <div style="display: flex; gap: 10px;">
           <div style="flex: 1;">
             <label style="font-size: 11px; font-weight: 700; color: var(--text-sub);">Ownership Type</label>
-            <select id="obOwnershipType" class="input-field" style="background: #071533;">
+            <select id="obOwnershipType" class="input-field" style="background: #111827;">
               <option value="Owner Occupied" selected>Owner Occupied</option>
               <option value="Tenant">Tenant / Rented</option>
             </select>
@@ -1368,13 +1437,13 @@
 
   <!-- ==================== CLIENT JAVASCRIPT ==================== -->
   <script>
-    // Current Authenticated User State
+    // Current Authenticated User State (Default: Society Admin Console)
     let currentUser = {
-      role: 'resident', // 'resident' | 'guard' | 'admin'
-      name: 'Vishwa (Resident Owner)',
-      flat: 'B-402',
-      phone: '9876543210',
-      badge_id: null,
+      role: 'admin',
+      name: 'Col. S. Rathore (Society Admin)',
+      flat: null,
+      phone: 'admin@gatepass.com',
+      badge_id: 'ADMIN-01',
       gate: null,
       society: 'Emerald Heights Residency'
     };
@@ -1667,9 +1736,20 @@
       }
 
       // Persona Banner
+      const bannerActions = document.getElementById('bannerActions');
       if (role === 'resident') {
-        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-house-user"></i> <span>Flat ${flat} • Resident Owner Portal</span>`;
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-house-user" style="color: #F97316;"></i> <span>Flat ${flat} • Resident Owner Portal</span>`;
         document.getElementById('bannerSubtitle').textContent = `Welcome back, ${name}! Manage visitor approvals, instant delivery passes, vehicle slots & maintenance bills for Flat ${flat}.`;
+        if (bannerActions) {
+          bannerActions.innerHTML = `
+            <button class="btn-act btn-primary" onclick="openPassModal('guest')">
+              <i class="fa-solid fa-plus"></i> Pre-Approve Visitor
+            </button>
+            <button class="btn-act btn-leave" onclick="openAuthModal()">
+              <i class="fa-solid fa-right-left"></i> Switch Role
+            </button>
+          `;
+        }
         document.getElementById('guardActionBar').style.display = 'none';
         document.getElementById('adminFlatsPanel').style.display = 'none';
         document.getElementById('maintenanceCardPanel').style.display = 'flex';
@@ -1677,16 +1757,36 @@
         document.getElementById('statLabel3').textContent = `Flat ${flat} Maintenance`;
         document.getElementById('passFlat').value = flat;
       } else if (role === 'guard') {
-        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-shield-halved"></i> <span>Security Gate Terminal • ${gate || 'Main Gate #1'}</span>`;
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-shield-halved" style="color: #0284C7;"></i> <span>Security Gate Terminal • ${gate || 'Main Gate #1'}</span>`;
         document.getElementById('bannerSubtitle').textContent = `Duty Officer: ${name} (Badge: ${currentUser.badge_id || 'SEC-104'}). Verify QR passes, log walk-in visitors, and manage CCTV surveillance.`;
+        if (bannerActions) {
+          bannerActions.innerHTML = `
+            <button class="btn-act btn-primary" style="background: #0284C7; border: none;" onclick="openWalkInModal()">
+              <i class="fa-solid fa-id-card"></i> Check-In Walk-In
+            </button>
+            <button class="btn-act btn-leave" onclick="openAuthModal()">
+              <i class="fa-solid fa-right-left"></i> Switch Terminal
+            </button>
+          `;
+        }
         document.getElementById('guardActionBar').style.display = 'flex';
         document.getElementById('adminFlatsPanel').style.display = 'none';
         document.getElementById('maintenanceCardPanel').style.display = 'none';
         document.getElementById('statLabel1').textContent = `Visitors at Gates`;
         document.getElementById('statLabel3').textContent = `Gate Status: Operational`;
       } else {
-        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-user-tie"></i> <span>Society Management Committee Command Center</span>`;
-        document.getElementById('bannerSubtitle').textContent = `Estate Administrator: ${name}. Real-time monitoring across 48 flats, financial collections, guard logs & facility complaints.`;
+        document.getElementById('bannerTitle').innerHTML = `<i class="fa-solid fa-user-tie" style="color: #10B981;"></i> <span>Emerald Heights Residency • Society Admin Command Center</span>`;
+        document.getElementById('bannerSubtitle').textContent = `Estate Administrator: ${name}. Full apartment management across 48 flats, financial collections, security logs & resident onboarding.`;
+        if (bannerActions) {
+          bannerActions.innerHTML = `
+            <button class="btn-act btn-primary" style="background: #10B981; border: none;" onclick="openOnboardModal()">
+              <i class="fa-solid fa-user-plus"></i> + Onboard Resident Owner
+            </button>
+            <button class="btn-act btn-leave" onclick="openAuthModal()">
+              <i class="fa-solid fa-right-left"></i> Custom Login
+            </button>
+          `;
+        }
         document.getElementById('guardActionBar').style.display = 'none';
         document.getElementById('adminFlatsPanel').style.display = 'flex';
         document.getElementById('maintenanceCardPanel').style.display = 'none';
@@ -1694,12 +1794,62 @@
         document.getElementById('statLabel3').textContent = `Total Dues: ₹28,450`;
       }
 
+      updateRoleSelectorButtons();
+
       // Save current persona session to localStorage
       try {
         localStorage.setItem('gatepass_current_user', JSON.stringify(currentUser));
       } catch(e) {}
 
       fetchInitialData();
+    }
+
+    function updateRoleSelectorButtons() {
+      const btnAdmin = document.getElementById('btnRoleAdmin');
+      const btnResident = document.getElementById('btnRoleResident');
+      const btnGuard = document.getElementById('btnRoleGuard');
+      if (!btnAdmin || !btnResident || !btnGuard) return;
+
+      btnAdmin.className = 'role-sel-btn' + (currentUser.role === 'admin' ? ' active-admin' : '');
+      btnResident.className = 'role-sel-btn' + (currentUser.role === 'resident' ? ' active-resident' : '');
+      btnGuard.className = 'role-sel-btn' + (currentUser.role === 'guard' ? ' active-guard' : '');
+    }
+
+    function quickSwitchPersona(role) {
+      if (role === 'admin') {
+        currentUser = {
+          role: 'admin',
+          name: 'Col. S. Rathore (Society Admin)',
+          flat: null,
+          phone: 'admin@gatepass.com',
+          badge_id: 'ADMIN-01',
+          gate: null,
+          society: 'Emerald Heights Residency'
+        };
+      } else if (role === 'resident') {
+        currentUser = {
+          role: 'resident',
+          name: 'Vishwa (Resident Owner)',
+          flat: 'B-402',
+          phone: '9876543210',
+          badge_id: null,
+          gate: null,
+          society: 'Emerald Heights Residency'
+        };
+      } else if (role === 'guard') {
+        currentUser = {
+          role: 'guard',
+          name: 'Officer Rajesh Kumar',
+          badge_id: 'SEC-104',
+          gate: 'Main Gate #1',
+          flat: null,
+          society: 'Emerald Heights Residency'
+        };
+      }
+      try {
+        localStorage.setItem('gatepass_current_user', JSON.stringify(currentUser));
+      } catch(e) {}
+      applyPersonaUI();
     }
 
     // AUTHENTICATION TAB SWITCHING & SUBMISSIONS

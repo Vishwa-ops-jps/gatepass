@@ -279,7 +279,7 @@ export default function AdminHome({
         {/* Quick Admin Actions Row */}
         <View style={styles.adminActionRow}>
           <TouchableOpacity
-            style={[styles.adminBtn, { backgroundColor: '#2563EB', borderColor: '#3B82F6' }]}
+            style={[styles.adminBtn, { backgroundColor: '#10B981', borderColor: '#059669' }]}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.8}
           >
@@ -804,7 +804,7 @@ export default function AdminHome({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#071630',
+    backgroundColor: '#0A0E17',
   },
   content: {
     padding: 16,
@@ -812,11 +812,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   adminHero: {
-    backgroundColor: '#0F2D6B',
+    backgroundColor: '#111827',
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalInput: {
-    backgroundColor: '#071533',
+    backgroundColor: '#111827',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
