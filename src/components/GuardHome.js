@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Image,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,8 +16,16 @@ import ScannerModal from './ScannerModal';
 
 const QUICK_DELIVERY_TAGS = ['Zomato', 'Swiggy', 'Blinkit', 'Amazon', 'Zepto'];
 
+const PRESET_PHOTOS = {
+  guest: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+  delivery: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop&q=80',
+  cab: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+  service: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+};
+
 export default function GuardHome({
   onSendApprovalRequest,
+  onDirectVisitorEntry,
   activeVisitors,
   onCheckOutVisitor,
 }) {
@@ -24,7 +33,7 @@ export default function GuardHome({
   const [visitorName, setVisitorName] = useState('');
   const [phone, setPhone] = useState('');
   const [passcode, setPasscode] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('guest');
+  const [selectedCategory, setSelectedCategory] = useState('delivery');
   const [vehicleNo, setVehicleNo] = useState('');
   const [scannerVisible, setScannerVisible] = useState(false);
 
@@ -40,6 +49,35 @@ export default function GuardHome({
     } catch (e) {
       Alert.alert('Verification Failed', e.message || 'Invalid or expired passcode.');
     }
+  };
+
+  const handleDirectCheckIn = () => {
+    if (!flatNo) {
+      Alert.alert('Required', 'Please enter destination flat number (e.g. B-402)');
+      return;
+    }
+    const name = visitorName || (selectedCategory === 'delivery' ? 'Delivery Partner' : 'Visitor');
+    const photo = PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest;
+
+    const payload = {
+      name,
+      flat: flatNo.toUpperCase(),
+      phone: phone || '+91 98000 11222',
+      purpose: selectedCategory === 'delivery' ? 'Delivery (Zomato/Swiggy)' : selectedCategory === 'cab' ? 'Cab (Uber/Ola)' : `Visiting Flat ${flatNo}`,
+      category: selectedCategory,
+      vehicle: vehicleNo ? vehicleNo.toUpperCase() : null,
+      photo,
+    };
+
+    if (onDirectVisitorEntry) {
+      onDirectVisitorEntry(payload);
+    } else {
+      Alert.alert('Entry Logged ✅', `${name} entry recorded for Flat ${flatNo}.`);
+    }
+
+    setVisitorName('');
+    setPhone('');
+    setVehicleNo('');
   };
 
   const handleSendRequest = () => {
@@ -61,9 +99,7 @@ export default function GuardHome({
       purpose: `Visiting Flat ${flatNo}`,
       flat: flatNo,
       status: 'pending',
-      image: selectedCategory === 'delivery'
-        ? 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      image: PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest,
     };
 
     onSendApprovalRequest(newRequest);
@@ -251,14 +287,24 @@ export default function GuardHome({
           </View>
         )}
 
-        {/* Send Approval Button */}
+        {/* Primary Direct Check-In Action (Replacing Manual Paper Writing) */}
         <TouchableOpacity
-          style={styles.sendAlertBtn}
+          style={[styles.sendAlertBtn, { backgroundColor: '#10B981', marginBottom: 10 }]}
+          onPress={handleDirectCheckIn}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+          <Text style={[styles.sendAlertBtnText, { fontWeight: '900' }]}>ALLOW ENTRY & SAVE TO REGISTER</Text>
+        </TouchableOpacity>
+
+        {/* Secondary Option: Resident Intercom Call */}
+        <TouchableOpacity
+          style={[styles.sendAlertBtn, { backgroundColor: '#1E293B', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}
           onPress={handleSendRequest}
           activeOpacity={0.8}
         >
-          <Ionicons name="call" size={18} color="#FFFFFF" />
-          <Text style={styles.sendAlertBtnText}>Call Flat {flatNo} & Request Entry</Text>
+          <Ionicons name="call" size={16} color="#94A3B8" />
+          <Text style={[styles.sendAlertBtnText, { color: '#CBD5E1', fontSize: 13 }]}>Call Flat {flatNo} Intercom</Text>
         </TouchableOpacity>
       </View>
 

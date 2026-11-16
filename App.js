@@ -35,6 +35,7 @@ import {
   initWebSocket,
   fetchInitialData,
   apiCreateVisitorRequest,
+  apiLogVisitorEntry,
   apiApproveRequest,
   apiDenyRequest,
   apiCreatePass,
@@ -43,8 +44,16 @@ import {
 } from './src/services/api';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null); // null means show LoginScreen
-  const [role, setRole] = useState('resident'); // 'resident' | 'guard'
+  // Default directly to Security Guard Duty Terminal (Replacing Manual Paper Logbook)
+  const [currentUser, setCurrentUser] = useState({
+    id: 'sec-104',
+    name: 'Officer Rajesh Kumar',
+    role: 'guard',
+    badge_id: 'SEC-104',
+    gate: 'Main Gate #1',
+    society: 'Emerald Heights Residency',
+  });
+  const [role, setRole] = useState('guard'); // Opens directly in Security Guard mode
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'staff' | 'amenities' | 'maintenance'
 
   // Application Data States
@@ -262,6 +271,42 @@ export default function App() {
     } catch (e) {}
   };
 
+  // Direct Visitor Entry (Replacing Manual Paper Writing at the Gate)
+  const handleDirectVisitorEntry = async (data) => {
+    const newVisitor = {
+      id: 'v-' + Date.now(),
+      name: data.name,
+      flat: data.flat,
+      inTime: 'Just now',
+      image: data.photo,
+      purpose: data.purpose,
+      vehicle: data.vehicle,
+    };
+    setActiveVisitors((prev) => [newVisitor, ...prev]);
+    setRecentActivity((prev) => [
+      {
+        id: 'act-' + Date.now(),
+        name: data.name,
+        role: data.category ? data.category.charAt(0).toUpperCase() + data.category.slice(1) : 'Visitor',
+        category: data.category || 'guest',
+        time: 'Just now',
+        gate: 'Main Gate 1',
+        action: 'Entered Society Gate',
+        status: 'approved',
+      },
+      ...prev,
+    ]);
+
+    try {
+      await apiLogVisitorEntry(data);
+    } catch (e) {}
+
+    Alert.alert(
+      'Entry Logged in Register! ✅',
+      `${data.name} entry recorded for Flat ${data.flat} at Main Gate 1.`
+    );
+  };
+
   // Handle Guard checking out visitor
   const handleCheckOutVisitor = async (id) => {
     const target = activeVisitors.find((v) => v.id === id);
@@ -352,6 +397,7 @@ export default function App() {
         ) : role === 'guard' ? (
           <GuardHome
             onSendApprovalRequest={handleSendApprovalRequest}
+            onDirectVisitorEntry={handleDirectVisitorEntry}
             activeVisitors={activeVisitors}
             onCheckOutVisitor={handleCheckOutVisitor}
           />

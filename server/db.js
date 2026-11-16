@@ -464,6 +464,43 @@ const DB = {
     return doc;
   },
 
+  async insertVisitor(visitor) {
+    const doc = {
+      ...visitor,
+      id: visitor.id || 'v-' + Date.now(),
+      status: visitor.status || 'approved',
+      created_at: visitor.created_at || new Date().toISOString(),
+    };
+    if (isMongo) {
+      await col('visitors').insertOne(doc);
+    } else {
+      memStore.visitors.unshift(doc);
+      saveToFile();
+    }
+    return doc;
+  },
+
+  async getVisitorById(id) {
+    if (isMongo) return withoutMongoId(await col('visitors').findOne({ id }));
+    return memStore.visitors.find((v) => v.id === id) || null;
+  },
+
+  async updateVisitorStatus(id, status, inTime = null, outTime = null) {
+    const updates = { status };
+    if (inTime) updates.in_time = inTime;
+    if (outTime) updates.out_time = outTime;
+
+    if (isMongo) {
+      await col('visitors').updateOne({ id }, { $set: updates });
+    } else {
+      const v = memStore.visitors.find((x) => x.id === id);
+      if (v) {
+        Object.assign(v, updates);
+        saveToFile();
+      }
+    }
+  },
+
   async getRequestById(id) {
     if (isMongo) return withoutMongoId(await col('visitors').findOne({ id }));
     return memStore.visitors.find((v) => v.id === id) || null;

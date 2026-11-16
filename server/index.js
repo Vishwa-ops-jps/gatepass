@@ -363,7 +363,51 @@ app.post('/api/passes/verify', async (req, res) => {
   res.status(404).json({ valid: false, message: 'Invalid or expired passcode' });
 });
 
-// 5. Active Visitors Inside & Checkout
+// 5. Direct Security Gate Entry (Replacing Manual Paper Register)
+app.post('/api/visitors/entry', async (req, res) => {
+  const { name, phone, flat, purpose, category, vehicle, photo, image } = req.body;
+  const now = new Date();
+  const timeDisplay = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const newVisitor = {
+    id: 'v-' + Date.now(),
+    name: name || 'Visitor',
+    phone: phone || '+91 98000 00000',
+    type: category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Visitor',
+    category: category || 'guest',
+    vehicle: vehicle ? vehicle.toUpperCase() : null,
+    gate: 'Main Gate 1',
+    purpose: purpose || (flat ? `Visiting Flat ${flat}` : 'General Visit'),
+    flat: (flat || 'B-402').toUpperCase(),
+    status: 'approved', // Directly checked in by security guard
+    in_time: now.toISOString(),
+    in_time_display: timeDisplay,
+    out_time: null,
+    image: photo || image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    created_at: now.toISOString(),
+  };
+
+  await DB.insertVisitor(newVisitor);
+
+  const entryActivity = {
+    id: 'act-' + Date.now(),
+    name: newVisitor.name,
+    role: newVisitor.type,
+    category: newVisitor.category,
+    gate: 'Main Gate 1',
+    flat: newVisitor.flat,
+    action: 'Entered Society Gate',
+    status: 'approved',
+    timestamp: timeDisplay,
+    created_at: now.toISOString(),
+  };
+  await DB.insertActivity(entryActivity);
+
+  broadcast('VISITOR_ENTERED', { visitor: newVisitor, activity: entryActivity });
+  res.status(201).json({ success: true, visitor: newVisitor, activity: entryActivity });
+});
+
+// 5b. Active Visitors Inside & Checkout
 app.get('/api/visitors/active', async (req, res) => {
   const { flat } = req.query;
   res.json(await DB.getActiveVisitors(flat));

@@ -115,6 +115,19 @@ export async function fetchInitialData() {
 }
 
 // 2. Guard sends visitor approval request to resident
+export async function apiLogVisitorEntry(data) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/visitors/entry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 export async function apiCreateVisitorRequest(data) {
   return await apiRequest('/requests', {
     method: 'POST',
