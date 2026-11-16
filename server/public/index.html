@@ -9,7 +9,7 @@
   <style>
     :root {
       --bg-dark: #0A0E17;
-      --card-bg: rgba(17, 24, 39, 0.92);
+      --card-bg: rgba(17, 24, 39, 0.94);
       --card-border: rgba(255, 255, 255, 0.08);
       --card-hover: rgba(30, 41, 59, 0.95);
       --emerald: #10B981;
@@ -38,7 +38,7 @@
     /* Top Security Station Header */
     .header {
       height: 68px;
-      background: rgba(10, 14, 23, 0.95);
+      background: rgba(10, 14, 23, 0.96);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--card-border);
@@ -102,13 +102,28 @@
       font-weight: 800;
       color: #FB923C;
     }
+    .btn-export-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34D399;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-export-top:hover { background: #10B981; color: #FFF; }
     .btn-apk {
       display: flex;
       align-items: center;
       gap: 6px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--card-border);
-      padding: 7px 14px;
+      padding: 6px 14px;
       border-radius: 20px;
       color: #FFF;
       font-size: 12px;
@@ -121,7 +136,7 @@
     /* Main Container */
     .container {
       flex: 1;
-      max-width: 1540px;
+      max-width: 1560px;
       width: 100%;
       margin: 0 auto;
       padding: 24px;
@@ -130,7 +145,7 @@
       gap: 24px;
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 1080px) {
       .container { grid-template-columns: 1fr; }
       .header { padding: 0 16px; }
       .header-center { display: none; }
@@ -207,9 +222,9 @@
       padding: 16px;
     }
     .photo-preview-box {
-      width: 90px;
-      height: 90px;
-      border-radius: 16px;
+      width: 96px;
+      height: 96px;
+      border-radius: 18px;
       background: #1F2937;
       border: 2px solid var(--border-color);
       display: flex;
@@ -218,6 +233,7 @@
       overflow: hidden;
       flex-shrink: 0;
       position: relative;
+      cursor: pointer;
     }
     .photo-preview-box img {
       width: 100%;
@@ -234,19 +250,19 @@
       font-weight: 700;
       text-align: center;
     }
-    .photo-preview-placeholder i { font-size: 24px; color: #64748B; }
+    .photo-preview-placeholder i { font-size: 26px; color: #64748B; }
 
     .photo-controls { display: flex; flex-direction: column; gap: 8px; flex: 1; }
     .photo-btn-row { display: flex; gap: 8px; }
-    .btn-photo {
+    .btn-photo-action {
       flex: 1;
-      padding: 8px 12px;
+      padding: 9px 12px;
       border-radius: 10px;
       border: 1px solid var(--border-color);
       background: rgba(255, 255, 255, 0.06);
       color: #FFF;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -254,8 +270,15 @@
       gap: 6px;
       transition: all 0.2s;
     }
-    .btn-photo:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--emerald); }
-    .quick-avatars { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+    .btn-photo-action.primary {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34D399;
+    }
+    .btn-photo-action:hover { background: rgba(255, 255, 255, 0.15); border-color: var(--emerald); }
+    .btn-photo-action.primary:hover { background: #10B981; color: #FFF; }
+
+    .quick-avatars { display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
     .avatar-chip {
       padding: 4px 8px;
       border-radius: 12px;
@@ -350,15 +373,17 @@
     /* Search & Filter Bar */
     .filter-bar {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       background: rgba(255, 255, 255, 0.03);
       padding: 8px 14px;
       border-radius: 14px;
       border: 1px solid var(--card-border);
+      flex-wrap: wrap;
     }
     .filter-input {
       flex: 1;
+      min-width: 160px;
       background: transparent;
       border: none;
       outline: none;
@@ -366,13 +391,23 @@
       font-size: 13px;
       font-weight: 600;
     }
+    .filter-select {
+      background: #111827;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #CBD5E1;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      outline: none;
+    }
 
     /* Active Visitors List */
     .visitor-list {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      max-height: 480px;
+      max-height: 440px;
       overflow-y: auto;
       padding-right: 4px;
     }
@@ -408,7 +443,7 @@
     .visitor-photo img { width: 100%; height: 100%; object-fit: cover; }
     .visitor-details { display: flex; flex-direction: column; gap: 3px; }
     .visitor-name { font-size: 15px; font-weight: 800; color: #FFF; display: flex; align-items: center; gap: 8px; }
-    .visitor-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px; }
+    .visitor-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .visitor-flat-tag {
       background: rgba(56, 189, 248, 0.15);
       color: #38BDF8;
@@ -450,7 +485,7 @@
       transform: scale(1.02);
     }
 
-    /* Today's Logbook Table */
+    /* Permanent Logbook Table */
     .log-table {
       width: 100%;
       border-collapse: collapse;
@@ -458,7 +493,7 @@
       text-align: left;
     }
     .log-table th {
-      padding: 10px 12px;
+      padding: 12px;
       background: rgba(255, 255, 255, 0.02);
       color: var(--text-muted);
       font-weight: 800;
@@ -471,6 +506,13 @@
       padding: 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       color: var(--text-sub);
+    }
+    .log-thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #1F2937;
     }
     .status-badge-inside {
       background: rgba(16, 185, 129, 0.15);
@@ -491,6 +533,104 @@
       display: inline-block;
     }
 
+    /* ==================== LIVE CAMERA MODAL ==================== */
+    .camera-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(14px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .camera-modal-box {
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 520px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+    .camera-viewport {
+      width: 100%;
+      height: 360px;
+      border-radius: 18px;
+      background: #000;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .camera-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* Viewfinder Alignment Overlay */
+    .camera-face-guide {
+      position: absolute;
+      width: 190px;
+      height: 240px;
+      border: 2px dashed rgba(16, 185, 129, 0.6);
+      border-radius: 50%;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    }
+    .camera-guide-text {
+      position: absolute;
+      bottom: 14px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #34D399;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 10px;
+      border-radius: 10px;
+      pointer-events: none;
+    }
+
+    .camera-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .btn-snap {
+      flex: 1;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFF;
+      font-weight: 900;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px var(--emerald-glow);
+    }
+    .btn-snap:hover { transform: scale(1.02); }
+    .btn-flip-cam {
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: #FFF;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
     /* Success Notification Toast */
     .toast {
       position: fixed;
@@ -509,7 +649,7 @@
       transform: translateY(120px);
       opacity: 0;
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 9999;
+      z-index: 99999;
     }
     .toast.show { transform: translateY(0); opacity: 1; }
   </style>
@@ -528,7 +668,7 @@
           <span>MAIN GATE #1 • VISITOR DESK</span>
           <span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #34D399; padding: 2px 8px; border-radius: 10px;">DUTY ACTIVE</span>
         </div>
-        <div class="station-sub">Emerald Heights Residency • Digital Entry Register</div>
+        <div class="station-sub">Emerald Heights Residency • Permanent Digital Logbook</div>
       </div>
     </div>
 
@@ -546,6 +686,9 @@
         <i class="fa-solid fa-user-group"></i>
         <span id="insideCountText">0 Inside Campus</span>
       </div>
+      <a href="/api/visitors/export" download class="btn-export-top" title="Export Visitor Register to Excel (CSV)">
+        <i class="fa-solid fa-file-excel"></i> Export Excel
+      </a>
       <a href="/GatePass.apk" download class="btn-apk" title="Download Android Mobile APK">
         <i class="fa-solid fa-download"></i> Guard APK
       </a>
@@ -560,39 +703,39 @@
       <div class="panel-header">
         <div>
           <div class="panel-title">
-            <i class="fa-solid fa-pen-to-square" style="color: var(--emerald);"></i>
+            <i class="fa-solid fa-camera-retro" style="color: var(--emerald);"></i>
             <span>Log Visitor Entry</span>
           </div>
-          <div class="panel-subtitle">Replace paper writing — record photo, name & purpose instantly</div>
+          <div class="panel-subtitle">Take visitor photo, enter flat & purpose — saved permanently to disk</div>
         </div>
-        <span style="font-size: 11px; background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 12px; color: var(--text-muted); font-weight: 700;">
-          Gate #1
+        <span style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #34D399; padding: 4px 10px; border-radius: 12px; font-weight: 800;">
+          <i class="fa-solid fa-floppy-disk"></i> Auto-Persist
         </span>
       </div>
 
-      <!-- 1. Photo Capture -->
+      <!-- 1. Photo Capture (Live Camera or Upload) -->
       <div class="form-group">
         <label class="form-label">
           <span>Visitor Photo <span class="req">*</span></span>
-          <span class="hint">Take live picture or select preset</span>
+          <span class="hint">Tap "Take Photo" to open camera</span>
         </label>
         <div class="photo-section">
-          <div class="photo-preview-box" id="photoPreviewContainer">
+          <div class="photo-preview-box" id="photoPreviewContainer" onclick="openLiveCamera()" title="Click to open camera">
             <div class="photo-preview-placeholder" id="photoPlaceholder">
               <i class="fa-solid fa-camera"></i>
-              <span>No Photo</span>
+              <span>Open Cam</span>
             </div>
             <img id="visitorPhotoImg" src="" alt="Visitor Photo" style="display: none;">
           </div>
 
           <div class="photo-controls">
             <div class="photo-btn-row">
-              <input type="file" id="cameraFileInput" accept="image/*" capture="user" style="display: none;" onchange="handleFileCapture(this)">
-              <button class="btn-photo" onclick="document.getElementById('cameraFileInput').click()">
+              <button class="btn-photo-action primary" onclick="openLiveCamera()">
                 <i class="fa-solid fa-camera"></i> Take Photo
               </button>
+              <input type="file" id="cameraFileInput" accept="image/*" capture="user" style="display: none;" onchange="handleFileCapture(this)">
               <input type="file" id="galleryFileInput" accept="image/*" style="display: none;" onchange="handleFileCapture(this)">
-              <button class="btn-photo" onclick="document.getElementById('galleryFileInput').click()">
+              <button class="btn-photo-action" onclick="document.getElementById('galleryFileInput').click()">
                 <i class="fa-solid fa-upload"></i> Upload
               </button>
             </div>
@@ -619,7 +762,7 @@
       <div class="form-group">
         <label class="form-label">
           <span>Mobile Phone Number</span>
-          <span class="hint">For resident intercom call & safety</span>
+          <span class="hint">For resident verification & security records</span>
         </label>
         <input type="tel" id="visitorPhoneInput" placeholder="e.g. 9876543210" class="input-box" maxlength="14">
       </div>
@@ -679,7 +822,7 @@
           <span>Vehicle Plate Number</span>
           <span class="hint">Optional (if entering with vehicle)</span>
         </label>
-        <input type="text" id="visitorVehicleInput" placeholder="e.g. KA-05-MM-1234 or Two-Wheeler" class="input-box" style="text-transform: uppercase;">
+        <input type="text" id="visitorVehicleInput" placeholder="e.g. KA-05-MM-1234" class="input-box" style="text-transform: uppercase;">
       </div>
 
       <!-- Check-In Action Button -->
@@ -689,7 +832,7 @@
       </button>
     </section>
 
-    <!-- RIGHT COLUMN: Currently Inside & Today's Register -->
+    <!-- RIGHT COLUMN: Currently Inside & Permanent Historical Logbook -->
     <div class="right-column">
 
       <!-- Active Inside Campus Panel -->
@@ -717,30 +860,57 @@
         </div>
       </section>
 
-      <!-- Today's Logbook Ledger -->
+      <!-- Permanent Logbook Ledger (Auditable Across Months & Years) -->
       <section class="panel">
         <div class="panel-header">
           <div>
             <div class="panel-title">
               <i class="fa-solid fa-book-bookmark" style="color: var(--accent);"></i>
-              <span>Today's Complete Gate Logbook</span>
+              <span>Permanent Visitor Logbook & Archive</span>
             </div>
-            <div class="panel-subtitle">Auditable record of all entries and departures today</div>
+            <div class="panel-subtitle">Complete historical audit trail stored permanently with photos</div>
           </div>
-          <button onclick="refreshRegister()" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 5px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700;">
-            <i class="fa-solid fa-rotate-right"></i> Refresh
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <a href="/api/visitors/export" download class="btn-export-top" style="padding: 4px 10px; font-size: 11px;">
+              <i class="fa-solid fa-file-csv"></i> Download CSV
+            </a>
+            <button onclick="refreshRegister()" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 4px 10px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700;">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+          </div>
         </div>
 
-        <div style="overflow-x: auto;">
+        <!-- Date & Search Filters for Monthly Audits -->
+        <div class="filter-bar">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="fa-regular fa-calendar" style="color: #94A3B8;"></i>
+            <input type="date" id="filterDateInput" class="filter-select" onchange="filterHistoricalLogs()">
+          </div>
+          <select id="filterMonthSelect" class="filter-select" onchange="filterHistoricalLogs()">
+            <option value="">All Months</option>
+            <option value="2026-11" selected>November 2026</option>
+            <option value="2026-10">October 2026</option>
+            <option value="2026-09">September 2026</option>
+          </select>
+          <select id="filterStatusSelect" class="filter-select" onchange="filterHistoricalLogs()">
+            <option value="">All Statuses</option>
+            <option value="approved">Inside Campus</option>
+            <option value="checked_out">Departed</option>
+          </select>
+          <input type="text" id="logSearchInput" placeholder="Filter by name, flat, vehicle..." class="filter-input" onkeyup="filterHistoricalLogs()">
+        </div>
+
+        <div style="overflow-x: auto; max-height: 400px;">
           <table class="log-table">
             <thead>
               <tr>
+                <th>Photo</th>
                 <th>Visitor</th>
                 <th>Flat</th>
                 <th>Purpose</th>
                 <th>In Time</th>
                 <th>Out Time</th>
+                <th>Duration</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -753,6 +923,42 @@
     </div>
   </main>
 
+  <!-- ==================== LIVE CAMERA MODAL ==================== -->
+  <div class="camera-modal-backdrop" id="cameraModal">
+    <div class="camera-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 17px; font-weight: 900; color: #FFF; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-camera" style="color: var(--emerald);"></i>
+            <span>Visitor Camera Verification</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">Center visitor's face inside the guide oval</div>
+        </div>
+        <i class="fa-solid fa-xmark" style="font-size: 20px; color: var(--text-muted); cursor: pointer;" onclick="closeLiveCamera()"></i>
+      </div>
+
+      <div class="camera-viewport">
+        <video id="cameraVideo" class="camera-video" autoplay playsinline></video>
+        <div class="camera-face-guide"></div>
+        <div class="camera-guide-text">Align visitor face here</div>
+      </div>
+
+      <canvas id="cameraCanvas" style="display: none;"></canvas>
+
+      <div class="camera-actions">
+        <button class="btn-flip-cam" onclick="switchCameraFacing()">
+          <i class="fa-solid fa-arrows-rotate"></i> Flip
+        </button>
+        <button class="btn-snap" onclick="captureCameraSnapshot()">
+          <i class="fa-solid fa-camera"></i> CAPTURE PHOTO
+        </button>
+        <button class="btn-flip-cam" onclick="closeLiveCamera()" style="background: rgba(239, 68, 68, 0.15); color: #F87171; border-color: rgba(239, 68, 68, 0.3);">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Success Notification Toast -->
   <div class="toast" id="notificationToast">
     <i class="fa-solid fa-circle-check" style="font-size: 20px;"></i>
@@ -760,7 +966,7 @@
   </div>
 
   <script>
-    // Selected Category State
+    // State
     let currentCategory = 'delivery';
     let currentPurposeDesc = 'Food Delivery (Zomato/Swiggy)';
     let currentPhotoUrl = 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop&q=80';
@@ -773,9 +979,11 @@
     };
 
     let activeVisitorsList = [];
-    let completeActivityLogs = [];
+    let completeHistoryList = [];
+    let mediaStream = null;
+    let currentFacingMode = 'user'; // 'user' or 'environment'
 
-    // Initialize clock
+    // Live Clock
     function updateClock() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -784,7 +992,76 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Preset Photo Selection
+    // ==================== LIVE CAMERA CAPTURE ====================
+    async function openLiveCamera() {
+      const modal = document.getElementById('cameraModal');
+      const video = document.getElementById('cameraVideo');
+      modal.style.display = 'flex';
+
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('WebRTC getUserMedia not supported in this environment');
+        }
+
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(t => t.stop());
+        }
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: currentFacingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+
+        video.srcObject = mediaStream;
+        await video.play();
+      } catch (err) {
+        console.warn('Direct webcam stream unavailable, falling back to camera file input:', err);
+        closeLiveCamera();
+        // Fallback directly to native camera file input
+        document.getElementById('cameraFileInput').click();
+      }
+    }
+
+    function switchCameraFacing() {
+      currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+      openLiveCamera();
+    }
+
+    function closeLiveCamera() {
+      const modal = document.getElementById('cameraModal');
+      modal.style.display = 'none';
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+    }
+
+    function captureCameraSnapshot() {
+      const video = document.getElementById('cameraVideo');
+      const canvas = document.getElementById('cameraCanvas');
+      if (!video.videoWidth) {
+        alert('Camera feed is still loading. Please wait a moment.');
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      currentPhotoUrl = canvas.toDataURL('image/jpeg', 0.88);
+      showPhotoPreview(currentPhotoUrl);
+      document.querySelectorAll('.avatar-chip').forEach(c => c.classList.remove('active'));
+
+      closeLiveCamera();
+      showToast('📸 Visitor photo captured successfully!');
+    }
+
+    // Photo Preview & Preset Handlers
     function setPresetPhoto(type) {
       document.querySelectorAll('.avatar-chip').forEach(c => c.classList.remove('active'));
       event.target.classList.add('active');
@@ -800,7 +1077,7 @@
       placeholder.style.display = 'none';
     }
 
-    // Handle File / Camera Capture
+    // File input fallback
     function handleFileCapture(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -808,12 +1085,13 @@
           currentPhotoUrl = e.target.result;
           showPhotoPreview(currentPhotoUrl);
           document.querySelectorAll('.avatar-chip').forEach(c => c.classList.remove('active'));
+          showToast('📸 Photo loaded successfully!');
         };
         reader.readAsDataURL(input.files[0]);
       }
     }
 
-    // Set Category
+    // Category Selector
     function setCategory(cat, desc) {
       currentCategory = cat;
       currentPurposeDesc = desc;
@@ -834,7 +1112,6 @@
       document.getElementById('visitorFlatInput').value = flat;
     }
 
-    // Show Notification Toast
     function showToast(msg) {
       const toast = document.getElementById('notificationToast');
       document.getElementById('toastMessage').textContent = msg;
@@ -842,7 +1119,7 @@
       setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
-    // Submit Visitor Entry (Replacing Manual Paper Writing)
+    // Submit Visitor Entry (Auto-saved Permanently to Disk)
     async function submitVisitorEntry() {
       const name = document.getElementById('visitorNameInput').value.trim();
       const flat = document.getElementById('visitorFlatInput').value.trim().toUpperCase();
@@ -857,7 +1134,7 @@
       const finalName = name || (currentCategory === 'delivery' ? 'Delivery Partner' : 'Visitor');
       const submitBtn = document.getElementById('btnCheckIn');
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> LOGGING ENTRY...';
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> LOGGING & ARCHIVING...';
 
       try {
         const payload = {
@@ -879,12 +1156,10 @@
         if (res.success && res.visitor) {
           showToast(`✅ Entry Logged: ${finalName} → Flat ${flat}`);
           
-          // Reset form fields
           document.getElementById('visitorNameInput').value = '';
           document.getElementById('visitorPhoneInput').value = '';
           document.getElementById('visitorVehicleInput').value = '';
           
-          // Re-fetch data
           await refreshRegister();
         } else {
           alert(res.error || 'Could not log entry');
@@ -897,7 +1172,7 @@
       }
     }
 
-    // Check Out Visitor (Exit Gate)
+    // Check Out Visitor
     async function checkOutVisitor(id, name) {
       if (!confirm(`Confirm check-out for ${name}?`)) return;
 
@@ -917,19 +1192,19 @@
       }
     }
 
-    // Refresh Register & Fetch Data
+    // Refresh Register & Historical Data
     async function refreshRegister() {
       try {
-        const [active, activity] = await Promise.all([
+        const [active, history] = await Promise.all([
           fetch('/api/visitors/active').then(r => r.json()),
-          fetch('/api/activity').then(r => r.json())
+          fetch('/api/visitors/history').then(r => r.json())
         ]);
 
         activeVisitorsList = active || [];
-        completeActivityLogs = activity || [];
+        completeHistoryList = history || [];
 
         renderActiveVisitors(activeVisitorsList);
-        renderTodayLogbook(completeActivityLogs);
+        filterHistoricalLogs();
       } catch (e) {
         console.error('Fetch error', e);
       }
@@ -964,7 +1239,7 @@
           <div class="visitor-card">
             <div class="visitor-left">
               <div class="visitor-photo">
-                <img src="${photo}" alt="${v.name}">
+                <img src="${photo}" alt="${v.name}" onerror="this.src='${PRESET_PHOTOS.guest}'">
               </div>
               <div class="visitor-details">
                 <div class="visitor-name">
@@ -988,7 +1263,6 @@
       }).join('');
     }
 
-    // Filter Active Visitors
     function filterActiveVisitors(q) {
       if (!q) return renderActiveVisitors(activeVisitorsList);
       const query = q.toLowerCase();
@@ -1001,26 +1275,73 @@
       renderActiveVisitors(filtered);
     }
 
-    // Render Today's Logbook Ledger
-    function renderTodayLogbook(logs) {
+    // Filter Permanent Historical Logbook
+    function filterHistoricalLogs() {
+      const dateVal = document.getElementById('filterDateInput').value;
+      const monthVal = document.getElementById('filterMonthSelect').value;
+      const statusVal = document.getElementById('filterStatusSelect').value;
+      const searchVal = (document.getElementById('logSearchInput').value || '').toLowerCase();
+
+      let filtered = completeHistoryList;
+
+      if (dateVal) {
+        filtered = filtered.filter(v => (v.date === dateVal) || (v.created_at && v.created_at.startsWith(dateVal)));
+      } else if (monthVal) {
+        filtered = filtered.filter(v => (v.month === monthVal) || (v.created_at && v.created_at.startsWith(monthVal)));
+      }
+
+      if (statusVal) {
+        filtered = filtered.filter(v => v.status === statusVal);
+      }
+
+      if (searchVal) {
+        filtered = filtered.filter(v => 
+          (v.name && v.name.toLowerCase().includes(searchVal)) ||
+          (v.flat && v.flat.toLowerCase().includes(searchVal)) ||
+          (v.phone && v.phone.includes(searchVal)) ||
+          (v.purpose && v.purpose.toLowerCase().includes(searchVal)) ||
+          (v.vehicle && v.vehicle.toLowerCase().includes(searchVal))
+        );
+      }
+
+      renderHistoricalTable(filtered);
+    }
+
+    function renderHistoricalTable(logs) {
       const tbody = document.getElementById('todayLogbookTbody');
       if (!logs || logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No entries logged yet today.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">No visitor records found matching your filter.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = logs.slice(0, 15).map(log => {
-        const isCheckedOut = log.action === 'Checked Out';
+      tbody.innerHTML = logs.map(v => {
+        const photo = v.image || PRESET_PHOTOS[v.category] || PRESET_PHOTOS.guest;
+        const isOut = v.status === 'checked_out';
+        const dateStr = v.date || (v.created_at ? v.created_at.split('T')[0] : 'Today');
+        const inTime = v.in_time_display || (v.in_time ? new Date(v.in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
+        const outTime = v.out_time_display || (v.out_time ? new Date(v.out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
+        const duration = v.duration || (isOut ? 'Recorded' : 'Inside Now');
+
         return `
           <tr>
-            <td style="font-weight: 800; color: #FFF;">${log.name}</td>
-            <td><span class="visitor-flat-tag">Flat ${log.flat || 'B-402'}</span></td>
-            <td>${log.role || log.category || 'Visitor'}</td>
-            <td>${log.timestamp || 'Today'}</td>
-            <td>${isCheckedOut ? log.timestamp : '—'}</td>
             <td>
-              <span class="${isCheckedOut ? 'status-badge-out' : 'status-badge-inside'}">
-                ${isCheckedOut ? 'Departed' : 'Inside'}
+              <img src="${photo}" class="log-thumb" alt="${v.name}" onerror="this.src='${PRESET_PHOTOS.guest}'">
+            </td>
+            <td>
+              <div style="font-weight: 800; color: #FFF;">${v.name}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">${v.phone || ''}</div>
+            </td>
+            <td><span class="visitor-flat-tag">Flat ${v.flat || 'B-402'}</span></td>
+            <td>${v.purpose || v.type}</td>
+            <td>
+              <div>${inTime}</div>
+              <div style="font-size: 10px; color: var(--text-muted);">${dateStr}</div>
+            </td>
+            <td>${isOut ? outTime : '—'}</td>
+            <td style="color: ${isOut ? 'var(--text-sub)' : '#34D399'}; font-weight: 700;">${duration}</td>
+            <td>
+              <span class="${isOut ? 'status-badge-out' : 'status-badge-inside'}">
+                ${isOut ? 'Departed' : 'Inside'}
               </span>
             </td>
           </tr>

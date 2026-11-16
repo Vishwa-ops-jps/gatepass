@@ -485,10 +485,12 @@ const DB = {
     return memStore.visitors.find((v) => v.id === id) || null;
   },
 
-  async updateVisitorStatus(id, status, inTime = null, outTime = null) {
+  async updateVisitorStatus(id, status, inTime = null, outTime = null, outTimeDisplay = null, duration = null) {
     const updates = { status };
     if (inTime) updates.in_time = inTime;
     if (outTime) updates.out_time = outTime;
+    if (outTimeDisplay) updates.out_time_display = outTimeDisplay;
+    if (duration) updates.duration = duration;
 
     if (isMongo) {
       await col('visitors').updateOne({ id }, { $set: updates });
@@ -499,6 +501,34 @@ const DB = {
         saveToFile();
       }
     }
+  },
+
+  async getAllVisitors(filter = {}) {
+    const { date, month, flat, search } = filter;
+    let list = memStore.visitors || [];
+
+    if (date) {
+      list = list.filter((v) => v.date === date || (v.created_at && v.created_at.startsWith(date)));
+    }
+    if (month) {
+      list = list.filter((v) => v.month === month || (v.created_at && v.created_at.startsWith(month)));
+    }
+    if (flat) {
+      const cFlat = cleanFlat(flat);
+      list = list.filter((v) => cleanFlat(v.flat) === cFlat);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (v) =>
+          (v.name && v.name.toLowerCase().includes(q)) ||
+          (v.flat && v.flat.toLowerCase().includes(q)) ||
+          (v.phone && v.phone.includes(q)) ||
+          (v.vehicle && v.vehicle.toLowerCase().includes(q)) ||
+          (v.purpose && v.purpose.toLowerCase().includes(q))
+      );
+    }
+    return list;
   },
 
   async getRequestById(id) {

@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { apiVerifyPasscode } from '../services/api';
 import ScannerModal from './ScannerModal';
@@ -35,7 +36,53 @@ export default function GuardHome({
   const [passcode, setPasscode] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('delivery');
   const [vehicleNo, setVehicleNo] = useState('');
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [scannerVisible, setScannerVisible] = useState(false);
+
+  // Take photo using device camera
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Camera Permission Required', 'Please enable camera access to take visitor photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const photoData = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        setCapturedPhoto(photoData);
+      }
+    } catch (err) {
+      Alert.alert('Camera Notice', 'Could not open camera viewfinder. Please verify device permissions.');
+    }
+  };
+
+  // Upload photo from gallery
+  const handlePickPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const photoData = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        setCapturedPhoto(photoData);
+      }
+    } catch (err) {
+      Alert.alert('Gallery Notice', 'Could not select photo.');
+    }
+  };
 
   const handleVerifyPasscode = async () => {
     if (!passcode) {
@@ -57,7 +104,7 @@ export default function GuardHome({
       return;
     }
     const name = visitorName || (selectedCategory === 'delivery' ? 'Delivery Partner' : 'Visitor');
-    const photo = PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest;
+    const photo = capturedPhoto || PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest;
 
     const payload = {
       name,
@@ -78,6 +125,7 @@ export default function GuardHome({
     setVisitorName('');
     setPhone('');
     setVehicleNo('');
+    setCapturedPhoto(null);
   };
 
   const handleSendRequest = () => {
@@ -193,6 +241,35 @@ export default function GuardHome({
         <View style={styles.cardHeader}>
           <Ionicons name="person-add-outline" size={20} color={colors.primary} />
           <Text style={styles.cardTitle}>Visitor Check-In & Ring Flat</Text>
+        </View>
+
+        {/* Visitor Photo Live Capture Box */}
+        <View style={styles.photoCaptureRow}>
+          <TouchableOpacity
+            style={styles.photoCaptureBox}
+            onPress={handleTakePhoto}
+            activeOpacity={0.8}
+          >
+            {capturedPhoto ? (
+              <Image source={{ uri: capturedPhoto }} style={styles.photoCapturedImg} />
+            ) : (
+              <View style={styles.photoEmptyPlaceholder}>
+                <Ionicons name="camera" size={24} color="#94A3B8" />
+                <Text style={styles.photoEmptyText}>Take Photo</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.photoBtnStack}>
+            <TouchableOpacity style={styles.actionCamBtn} onPress={handleTakePhoto} activeOpacity={0.8}>
+              <Ionicons name="camera-reverse" size={16} color="#FFFFFF" />
+              <Text style={styles.actionCamBtnText}>Open Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionGalleryBtn} onPress={handlePickPhoto} activeOpacity={0.8}>
+              <Ionicons name="image-outline" size={16} color="#94A3B8" />
+              <Text style={styles.actionGalleryBtnText}>From Gallery</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Category Selector */}
@@ -506,6 +583,78 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  photoCaptureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+  },
+  photoCaptureBox: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoCapturedImg: {
+    width: '100%',
+    height: '100%',
+  },
+  photoEmptyPlaceholder: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  photoEmptyText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  photoBtnStack: {
+    flex: 1,
+    gap: 8,
+  },
+  actionCamBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#10B981',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  actionCamBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  actionGalleryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  actionGalleryBtnText: {
+    color: '#64748B',
+    fontWeight: '700',
+    fontSize: 12,
   },
   categoryRow: {
     flexDirection: 'row',

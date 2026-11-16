@@ -8,10 +8,12 @@ const DB = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
+// Middleware (Supports High-Resolution Camera Photo Captures)
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/data/photos', express.static(path.join(__dirname, 'data', 'photos')));
 
 // Create HTTP Server
 const server = http.createServer(app);
@@ -363,27 +365,52 @@ app.post('/api/passes/verify', async (req, res) => {
   res.status(404).json({ valid: false, message: 'Invalid or expired passcode' });
 });
 
-// 5. Direct Security Gate Entry (Replacing Manual Paper Register)
+// 5. Direct Security Gate Entry (Replacing Manual Paper Register with Permanent Disk Storage)
 app.post('/api/visitors/entry', async (req, res) => {
   const { name, phone, flat, purpose, category, vehicle, photo, image } = req.body;
   const now = new Date();
   const timeDisplay = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const monthStr = dateStr.slice(0, 7); // YYYY-MM
+  const visitorId = 'v-' + Date.now();
+
+  // Save High-Resolution Camera Photo Permanently to Disk
+  let savedPhotoUrl = photo || image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+  if (photo && photo.startsWith('data:image/')) {
+    try {
+      const photosDir = path.join(__dirname, 'data', 'photos');
+      if (!fs.existsSync(photosDir)) fs.mkdirSync(photosDir, { recursive: true });
+      const ext = photo.includes('png') ? 'png' : 'jpg';
+      const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+      const filename = `visitor_${visitorId}.${ext}`;
+      const filePath = path.join(photosDir, filename);
+      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+      savedPhotoUrl = `/data/photos/${filename}`;
+    } catch (err) {
+      console.error('[GatePass Server] Error writing visitor photo to disk:', err);
+    }
+  }
 
   const newVisitor = {
-    id: 'v-' + Date.now(),
+    id: visitorId,
     name: name || 'Visitor',
     phone: phone || '+91 98000 00000',
     type: category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Visitor',
     category: category || 'guest',
     vehicle: vehicle ? vehicle.toUpperCase() : null,
     gate: 'Main Gate 1',
+    duty_guard: 'Officer Rajesh Kumar',
     purpose: purpose || (flat ? `Visiting Flat ${flat}` : 'General Visit'),
     flat: (flat || 'B-402').toUpperCase(),
     status: 'approved', // Directly checked in by security guard
+    date: dateStr,
+    month: monthStr,
     in_time: now.toISOString(),
     in_time_display: timeDisplay,
     out_time: null,
-    image: photo || image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    out_time_display: null,
+    duration: null,
+    image: savedPhotoUrl,
     created_at: now.toISOString(),
   };
 
@@ -419,7 +446,17 @@ app.put('/api/visitors/:id/checkout', async (req, res) => {
 
   if (!visitor) return res.status(404).json({ error: 'Visitor not found' });
 
-  await DB.updateVisitorStatus(id, 'checked_out', null, new Date().toISOString());
+  const now = new Date();
+  const outTimeDisplay = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  let durationStr = 'Short visit';
+  if (visitor.in_time) {
+    const diffMs = now - new Date(visitor.in_time);
+    const diffMins = Math.max(1, Math.round(diffMs / 60000));
+    if (diffMins < 60) durationStr = `${diffMins}m`;
+    else durationStr = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
+  }
+
+  await DB.updateVisitorStatus(id, 'checked_out', null, now.toISOString(), outTimeDisplay, durationStr);
 
   const exitActivity = {
     id: 'act-' + Date.now(),
@@ -427,14 +464,51 @@ app.put('/api/visitors/:id/checkout', async (req, res) => {
     role: visitor.type || 'Visitor',
     category: visitor.category || 'guest',
     gate: 'Main Gate 1',
+    flat: visitor.flat,
     action: 'Checked Out',
     status: 'completed',
-    timestamp: 'Just now',
+    timestamp: outTimeDisplay,
+    created_at: now.toISOString(),
   };
   await DB.insertActivity(exitActivity);
 
   broadcast('VISITOR_CHECKED_OUT', { visitorId: id, visitor, activity: exitActivity });
   res.json({ success: true, visitor, activity: exitActivity });
+});
+
+// 5c. Complete Visitor Logbook History (Search & Monthly Audit)
+app.get('/api/visitors/history', async (req, res) => {
+  const { date, month, flat, search } = req.query;
+  const list = await DB.getAllVisitors({ date, month, flat, search });
+  res.json(list);
+});
+
+// 5d. Export Visitor Logbook as CSV File
+app.get('/api/visitors/export', async (req, res) => {
+  const { month, date } = req.query;
+  const visitors = await DB.getAllVisitors({ month, date });
+
+  const headers = ['ID', 'Date', 'Name', 'Phone', 'Flat', 'Purpose', 'Category', 'Vehicle', 'In Time', 'Out Time', 'Duration', 'Status', 'Gate'];
+  const rows = visitors.map((v) => [
+    `"${v.id || ''}"`,
+    `"${v.date || (v.created_at ? v.created_at.split('T')[0] : '')}"`,
+    `"${(v.name || '').replace(/"/g, '""')}"`,
+    `"${v.phone || ''}"`,
+    `"${v.flat || ''}"`,
+    `"${(v.purpose || '').replace(/"/g, '""')}"`,
+    `"${v.category || ''}"`,
+    `"${v.vehicle || ''}"`,
+    `"${v.in_time_display || ''}"`,
+    `"${v.out_time_display || ''}"`,
+    `"${v.duration || ''}"`,
+    `"${v.status || ''}"`,
+    `"${v.gate || 'Main Gate 1'}"`,
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="gatepass_logbook_${month || date || 'export'}.csv"`);
+  res.send(csv);
 });
 
 // 6. Activity Logs
