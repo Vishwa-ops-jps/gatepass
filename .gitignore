@@ -42,5 +42,6 @@ server/.env
 /ios
 /android
 
-# Standalone APK binaries
+# Standalone APK binaries and local archives
 *.apk
+apk/*.zip
