@@ -2,8 +2,17 @@ const fs = require('fs');
 const path = require('path');
 const { MongoClient } = require('mongodb');
 
+// Auto-load .env file if available
+const serverEnv = path.join(__dirname, '.env');
+const rootEnv = path.join(__dirname, '..', '.env');
+if (fs.existsSync(serverEnv)) {
+  try { process.loadEnvFile(serverEnv); } catch (e) {}
+} else if (fs.existsSync(rootEnv)) {
+  try { process.loadEnvFile(rootEnv); } catch (e) {}
+}
+
 const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mongodb') ? process.env.DATABASE_URL : null);
-const dbName = process.env.MONGODB_DB_NAME || 'gatepass';
+const dbName = process.env.MONGODB_DB_NAME || 'dtdc_kudlu_gate';
 const LOCAL_DB_PATH = path.join(__dirname, 'data', 'gatepass_db.json');
 
 let client = null;
@@ -126,17 +135,21 @@ async function initSchema() {
       isMongo = true;
       console.log(`[GatePass Database] Connected to MongoDB database "${dbName}" successfully!`);
 
-      // Create Indexes
-      await Promise.all([
-        database.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true }),
-        database.collection('users').createIndex({ role: 1, flat: 1 }),
-        database.collection('flats').createIndex({ flat: 1 }, { unique: true }),
-        database.collection('users').createIndex({ badge_id: 1 }, { sparse: true }),
-        database.collection('visitors').createIndex({ status: 1, flat: 1, created_at: -1 }),
-        database.collection('passes').createIndex({ code: 1 }, { unique: true }),
-        database.collection('activity_logs').createIndex({ flat: 1, created_at: -1 }),
-        database.collection('maintenance_bills').createIndex({ flat: 1 }),
-      ]);
+      // Safely ensure indexes (ignore if already exists with legacy options)
+      try {
+        await Promise.allSettled([
+          database.collection('users').createIndex({ email: 1 }, { sparse: true }),
+          database.collection('users').createIndex({ role: 1, flat: 1 }),
+          database.collection('flats').createIndex({ flat: 1 }),
+          database.collection('users').createIndex({ badge_id: 1 }, { sparse: true }),
+          database.collection('visitors').createIndex({ status: 1, flat: 1, created_at: -1 }),
+          database.collection('passes').createIndex({ code: 1 }),
+          database.collection('activity_logs').createIndex({ flat: 1, created_at: -1 }),
+          database.collection('maintenance_bills').createIndex({ flat: 1 }),
+        ]);
+      } catch (idxErr) {
+        console.log('[GatePass Database] Note: Using existing database indexes.');
+      }
 
       // Seed if empty
       const userCount = await database.collection('users').countDocuments();
