@@ -1,13 +1,12 @@
 import { Platform } from 'react-native';
 
-// In web, localhost connects directly. On Android emulator, use 10.0.2.2.
-const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const PORT = '5001';
+// Live Production Render Backend & MongoDB Atlas Handle
+export const BACKEND_URL = 'https://hdwd.onrender.com';
 
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:${PORT}/api`;
+  process.env.EXPO_PUBLIC_API_URL || `${BACKEND_URL}/api`;
 export const WS_BASE_URL =
-  process.env.EXPO_PUBLIC_WS_URL || `ws://${DEFAULT_HOST}:${PORT}/ws`;
+  process.env.EXPO_PUBLIC_WS_URL || `wss://hdwd.onrender.com/ws`;
 
 let socket = null;
 const eventListeners = new Set();
@@ -117,7 +116,7 @@ export async function fetchInitialData() {
 // 2. Guard sends visitor approval request to resident
 export async function apiLogVisitorEntry(data) {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/visitors/entry`, {
+    const res = await fetch(`${API_BASE_URL}/visitors/entry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -125,6 +124,16 @@ export async function apiLogVisitorEntry(data) {
     return await res.json();
   } catch (e) {
     return { success: false, error: e.message };
+  }
+}
+
+export async function apiGetAllVisitors(params = {}) {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await apiRequest(`/visitors${query ? `?${query}` : ''}`);
+    return Array.isArray(res) ? res : [];
+  } catch (e) {
+    return [];
   }
 }
 

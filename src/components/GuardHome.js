@@ -19,7 +19,7 @@ const PRESET_PHOTOS = {
   tech: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
 };
 
-const FLAT_PRESETS = ['Flat B-402', 'Flat A-104', 'Flat C-201', 'Flat A-101', 'Flat B-101'];
+const FLAT_PRESETS = ['B-402', 'A-104', 'C-201', 'A-101', 'B-101'];
 
 const PURPOSES = [
   { id: 'delivery', label: 'Delivery', icon: 'bicycle', desc: 'Food / Parcel Delivery' },
@@ -32,8 +32,10 @@ const PURPOSES = [
 
 export default function GuardHome({
   onDirectVisitorEntry,
-  activeVisitors,
+  activeVisitors = [],
+  historicalVisitors = [],
   onCheckOutVisitor,
+  onExportExcel,
 }) {
   const [flatNo, setFlatNo] = useState('B-402');
   const [visitorName, setVisitorName] = useState('');
@@ -42,6 +44,7 @@ export default function GuardHome({
   const [vehicleNo, setVehicleNo] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState(PRESET_PHOTOS.delivery);
   const [searchQuery, setSearchQuery] = useState('');
+  const [archiveSearchQuery, setArchiveSearchQuery] = useState('');
 
   // Live Camera capture
   const handleTakePhoto = async () => {
@@ -125,7 +128,7 @@ export default function GuardHome({
     setVehicleNo('');
   };
 
-  const filteredVisitors = activeVisitors.filter((v) => {
+  const filteredActiveVisitors = activeVisitors.filter((v) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -135,21 +138,40 @@ export default function GuardHome({
     );
   });
 
+  const displayHistory = historicalVisitors && historicalVisitors.length > 0 ? historicalVisitors : [
+    { id: 'h-1', name: 'Suresh Raina', flat: 'B-402', phone: '9844455666', purpose: 'Guest / Relative', inTime: '02:50 PM', out_time_display: '03:45 PM', status: 'Departed' },
+    { id: 'h-2', name: 'Mukesh Kumar (Zomato)', flat: 'B-402', phone: '9123456789', purpose: 'Food Delivery', inTime: '01:15 PM', out_time_display: '01:25 PM', status: 'Departed' },
+    { id: 'h-3', name: 'Amazon Courier', flat: 'A-104', phone: '9811200011', purpose: 'Parcel Delivery', inTime: '12:00 PM', out_time_display: '12:10 PM', status: 'Departed' },
+  ];
+
+  const filteredHistory = displayHistory.filter((v) => {
+    if (!archiveSearchQuery) return true;
+    const q = archiveSearchQuery.toLowerCase();
+    return (
+      (v.name && v.name.toLowerCase().includes(q)) ||
+      (v.flat && v.flat.toLowerCase().includes(q)) ||
+      (v.purpose && v.purpose.toLowerCase().includes(q))
+    );
+  });
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 50 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* ==================== 1. LOG VISITOR ENTRY PANEL ==================== */}
       <View style={styles.panel}>
         <View style={styles.panelHeader}>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginRight: 8 }}>
             <View style={styles.panelTitleRow}>
-              <Ionicons name="camera" size={20} color="#10B981" />
+              <Ionicons name="camera" size={18} color="#10B981" />
               <Text style={styles.panelTitle}>Log Visitor Entry</Text>
             </View>
-            <Text style={styles.panelSubtitle}>Take visitor photo, enter flat & purpose — saved permanently to disk</Text>
+            <Text style={styles.panelSubtitle}>Take visitor photo, enter flat & purpose</Text>
           </View>
           <View style={styles.autoPersistBadge}>
-            <Ionicons name="save-outline" size={12} color="#34D399" />
+            <Ionicons name="save-outline" size={11} color="#34D399" />
             <Text style={styles.autoPersistText}>Auto-Persist</Text>
           </View>
         </View>
@@ -164,7 +186,7 @@ export default function GuardHome({
               <Image source={{ uri: capturedPhoto }} style={styles.photoImg} />
             ) : (
               <View style={styles.photoEmpty}>
-                <Ionicons name="camera" size={28} color="#64748B" />
+                <Ionicons name="camera" size={26} color="#64748B" />
                 <Text style={styles.photoEmptyText}>Open Cam</Text>
               </View>
             )}
@@ -173,17 +195,17 @@ export default function GuardHome({
           <View style={styles.photoControls}>
             <View style={styles.photoBtnRow}>
               <TouchableOpacity style={styles.btnSnap} onPress={handleTakePhoto} activeOpacity={0.85}>
-                <Ionicons name="camera" size={16} color="#FFFFFF" />
+                <Ionicons name="camera" size={14} color="#FFFFFF" />
                 <Text style={styles.btnSnapText}>Take Photo</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnUpload} onPress={handlePickPhoto} activeOpacity={0.85}>
-                <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="cloud-upload-outline" size={14} color="#FFFFFF" />
                 <Text style={styles.btnUploadText}>Upload</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.presetsRow}>
-              <Text style={styles.presetLabel}>Quick Presets:</Text>
+              <Text style={styles.presetLabel}>Presets:</Text>
               {['guest', 'delivery', 'cab', 'tech'].map((p) => (
                 <TouchableOpacity
                   key={p}
@@ -240,17 +262,17 @@ export default function GuardHome({
           {FLAT_PRESETS.map((flat) => (
             <TouchableOpacity
               key={flat}
-              style={[styles.flatChip, flatNo === flat.replace('Flat ', '') && styles.flatChipActive]}
-              onPress={() => setFlatNo(flat.replace('Flat ', ''))}
+              style={[styles.flatChip, flatNo === flat && styles.flatChipActive]}
+              onPress={() => setFlatNo(flat)}
             >
-              <Text style={[styles.flatChipText, flatNo === flat.replace('Flat ', '') && styles.flatChipTextActive]}>
-                {flat}
+              <Text style={[styles.flatChipText, flatNo === flat && styles.flatChipTextActive]}>
+                Flat {flat}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Purpose of Visit Grid */}
+        {/* Purpose of Visit Grid (3 equal columns) */}
         <Text style={styles.label}>
           Purpose of Visit <Text style={styles.req}>*</Text>
         </Text>
@@ -263,10 +285,13 @@ export default function GuardHome({
             >
               <Ionicons
                 name={pur.icon}
-                size={18}
+                size={17}
                 color={selectedPurpose === pur.id ? '#34D399' : '#94A3B8'}
               />
-              <Text style={[styles.purposeBtnText, selectedPurpose === pur.id && styles.purposeBtnTextActive]}>
+              <Text
+                style={[styles.purposeBtnText, selectedPurpose === pur.id && styles.purposeBtnTextActive]}
+                numberOfLines={1}
+              >
                 {pur.label}
               </Text>
             </TouchableOpacity>
@@ -284,9 +309,9 @@ export default function GuardHome({
           autoCapitalize="characters"
         />
 
-        {/* Primary Submit Button */}
+        {/* Primary Submit Button (Clean inline flex, no overflow) */}
         <TouchableOpacity style={styles.btnSubmit} onPress={handleAllowEntry} activeOpacity={0.88}>
-          <Ionicons name="enter-outline" size={22} color="#FFFFFF" />
+          <Ionicons name="enter-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
           <Text style={styles.btnSubmitText}>ALLOW ENTRY & SAVE TO REGISTER</Text>
         </TouchableOpacity>
       </View>
@@ -294,12 +319,12 @@ export default function GuardHome({
       {/* ==================== 2. CURRENTLY INSIDE CAMPUS ==================== */}
       <View style={styles.panel}>
         <View style={styles.panelHeader}>
-          <View>
+          <View style={{ flex: 1, marginRight: 8 }}>
             <View style={styles.panelTitleRow}>
-              <Ionicons name="business" size={20} color="#34D399" />
+              <Ionicons name="business" size={18} color="#34D399" />
               <Text style={styles.panelTitle}>Currently Inside Campus</Text>
             </View>
-            <Text style={styles.panelSubtitle}>Click "Check Out" when the visitor exits the gate</Text>
+            <Text style={styles.panelSubtitle}>Tap "Check Out" when visitor departs</Text>
           </View>
           <View style={styles.activeCounterBadge}>
             <Text style={styles.activeCounterText}>{activeVisitors.length} Active</Text>
@@ -308,10 +333,10 @@ export default function GuardHome({
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={16} color="#64748B" />
+          <Ionicons name="search" size={15} color="#64748B" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by visitor name, flat #, or phone..."
+            placeholder="Search active visitors..."
             placeholderTextColor="#64748B"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -319,14 +344,14 @@ export default function GuardHome({
         </View>
 
         {/* Visitor Cards */}
-        {filteredVisitors.length === 0 ? (
+        {filteredActiveVisitors.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="shield-outline" size={32} color="#475569" />
+            <Ionicons name="shield-outline" size={28} color="#475569" />
             <Text style={styles.emptyTitle}>No Visitors Currently Inside Campus</Text>
-            <Text style={styles.emptySubtitle}>Log an entry above when a visitor arrives at the gate.</Text>
+            <Text style={styles.emptySubtitle}>Log visitor entry above when they reach the gate.</Text>
           </View>
         ) : (
-          filteredVisitors.map((v) => {
+          filteredActiveVisitors.map((v) => {
             const photoUri = v.image || PRESET_PHOTOS[v.category] || PRESET_PHOTOS.guest;
             const inTimeStr = v.inTime || 'Just now';
 
@@ -336,25 +361,21 @@ export default function GuardHome({
                   <Image source={{ uri: photoUri }} style={styles.visitorThumb} />
                   <View style={styles.visitorInfo}>
                     <View style={styles.visitorNameRow}>
-                      <Text style={styles.visitorName}>{v.name}</Text>
+                      <Text style={styles.visitorName} numberOfLines={1}>
+                        {v.name}
+                      </Text>
                       <View style={styles.flatTag}>
                         <Text style={styles.flatTagText}>Flat {v.flat}</Text>
                       </View>
                     </View>
                     <View style={styles.metaRow}>
                       <View style={styles.purposeTag}>
-                        <Text style={styles.purposeTagText}>{v.purpose || 'Visit'}</Text>
+                        <Text style={styles.purposeTagText} numberOfLines={1}>{v.purpose || 'Visit'}</Text>
                       </View>
                       <View style={styles.timeTag}>
-                        <Ionicons name="time-outline" size={12} color="#34D399" />
+                        <Ionicons name="time-outline" size={11} color="#34D399" />
                         <Text style={styles.timeTagText}>In: {inTimeStr}</Text>
                       </View>
-                      {v.vehicle ? (
-                        <View style={styles.vehicleTag}>
-                          <Ionicons name="car-outline" size={12} color="#94A3B8" />
-                          <Text style={styles.vehicleTagText}>{v.vehicle}</Text>
-                        </View>
-                      ) : null}
                     </View>
                   </View>
                 </View>
@@ -365,7 +386,7 @@ export default function GuardHome({
                   onPress={() => onCheckOutVisitor(v.id)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="log-out-outline" size={16} color="#F87171" />
+                  <Ionicons name="log-out-outline" size={15} color="#F87171" style={{ marginRight: 4 }} />
                   <Text style={styles.btnCheckOutText}>Check Out</Text>
                 </TouchableOpacity>
               </View>
@@ -374,6 +395,69 @@ export default function GuardHome({
         )}
       </View>
 
+      {/* ==================== 3. PERMANENT LOGBOOK & ARCHIVE (EXCEL SHEET) ==================== */}
+      <View style={styles.panel}>
+        <View style={styles.panelHeader}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <View style={styles.panelTitleRow}>
+              <Ionicons name="document-text" size={18} color="#FB923C" />
+              <Text style={styles.panelTitle}>Permanent Visitor Logbook</Text>
+            </View>
+            <Text style={styles.panelSubtitle}>Historical register stored permanently with photos</Text>
+          </View>
+
+          {/* Export to Excel Button */}
+          {onExportExcel ? (
+            <TouchableOpacity style={styles.btnExportExcelPanel} onPress={onExportExcel} activeOpacity={0.8}>
+              <Ionicons name="download-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.btnExportExcelPanelText}>Excel (CSV)</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {/* Filter search in archive */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={15} color="#64748B" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search full logbook by name, flat, date..."
+            placeholderTextColor="#64748B"
+            value={archiveSearchQuery}
+            onChangeText={setArchiveSearchQuery}
+          />
+        </View>
+
+        {/* History items */}
+        {filteredHistory.map((item) => {
+          const isOut = item.status === 'Departed';
+          const photoUri = item.image || item.photo || PRESET_PHOTOS.guest;
+          const outTimeStr = item.out_time_display || item.outTime || '—';
+
+          return (
+            <View key={item.id} style={styles.historyCard}>
+              <Image source={{ uri: photoUri }} style={styles.historyThumb} />
+              <View style={styles.historyInfo}>
+                <View style={styles.historyTopRow}>
+                  <Text style={styles.historyName} numberOfLines={1}>{item.name}</Text>
+                  <View style={styles.flatTag}>
+                    <Text style={styles.flatTagText}>Flat {item.flat}</Text>
+                  </View>
+                </View>
+                <Text style={styles.historyPurpose} numberOfLines={1}>{item.purpose || 'Visitor Entry'}</Text>
+                <View style={styles.historyTimeRow}>
+                  <Text style={styles.historyTimeText}>In: {item.inTime || 'Recorded'}</Text>
+                  {isOut ? <Text style={styles.historyTimeText}> • Out: {outTimeStr}</Text> : null}
+                </View>
+              </View>
+              <View style={[styles.historyStatusBadge, isOut ? styles.badgeDeparted : styles.badgeInside]}>
+                <Text style={[styles.historyStatusText, isOut ? styles.textDeparted : styles.textInside]}>
+                  {isOut ? 'Departed' : 'Inside'}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
@@ -382,61 +466,74 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0A0E1A',
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
   },
   panel: {
     backgroundColor: '#111827',
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 16,
-    marginBottom: 16,
+    padding: 14,
+    marginBottom: 14,
   },
   panelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-    paddingBottom: 12,
-    marginBottom: 14,
+    paddingBottom: 10,
+    marginBottom: 12,
   },
   panelTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   panelTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#FFFFFF',
   },
   panelSubtitle: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#94A3B8',
     marginTop: 2,
   },
   autoPersistBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   autoPersistText: {
     color: '#34D399',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  btnExportExcelPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  btnExportExcelPanelText: {
+    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: '#CBD5E1',
-    marginBottom: 6,
-    marginTop: 10,
+    marginBottom: 5,
+    marginTop: 8,
   },
   req: {
     color: '#EF4444',
@@ -444,23 +541,24 @@ const styles = StyleSheet.create({
   photoSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 14,
+    padding: 10,
   },
   photoPreviewBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
+    width: 76,
+    height: 76,
+    borderRadius: 14,
     backgroundColor: '#1F2937',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#374151',
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   photoImg: {
     width: '100%',
@@ -477,25 +575,25 @@ const styles = StyleSheet.create({
   },
   photoControls: {
     flex: 1,
-    gap: 8,
+    gap: 6,
   },
   photoBtnRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   btnSnap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: '#10B981',
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   btnSnapText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   btnUpload: {
@@ -503,34 +601,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   btnUploadText: {
     color: '#E2E8F0',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   presetsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     flexWrap: 'wrap',
   },
   presetLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#64748B',
     fontWeight: '700',
+    marginRight: 2,
   },
   presetChip: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
@@ -539,7 +638,7 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
   },
   presetChipText: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#94A3B8',
     fontWeight: '700',
   },
@@ -550,26 +649,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '600',
   },
   flatChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
+    gap: 5,
+    marginTop: 6,
   },
   flatChip: {
     backgroundColor: 'rgba(56, 189, 248, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   flatChipActive: {
     backgroundColor: '#0284C7',
@@ -577,7 +676,7 @@ const styles = StyleSheet.create({
   },
   flatChipText: {
     color: '#38BDF8',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   flatChipTextActive: {
@@ -586,17 +685,20 @@ const styles = StyleSheet.create({
   purposeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    gap: 6,
   },
   purposeBtn: {
     width: '31%',
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    paddingVertical: 10,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 3,
   },
   purposeBtnActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -604,7 +706,7 @@ const styles = StyleSheet.create({
   },
   purposeBtnText: {
     color: '#94A3B8',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -617,160 +719,220 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 18,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 4,
+    paddingVertical: 13,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginTop: 14,
+    overflow: 'hidden',
   },
   btnSubmitText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   activeCounterBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   activeCounterText: {
     color: '#34D399',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 10,
   },
   searchInput: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   emptyCard: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 6,
+    paddingVertical: 20,
+    gap: 4,
   },
   emptyTitle: {
     color: '#CBD5E1',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   emptySubtitle: {
     color: '#64748B',
-    fontSize: 11,
+    fontSize: 10,
   },
   visitorCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    gap: 10,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+    gap: 8,
   },
   visitorLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   visitorThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     backgroundColor: '#1E293B',
+    flexShrink: 0,
   },
   visitorInfo: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
+    gap: 3,
   },
   visitorNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   visitorName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 6,
   },
   flatTag: {
     backgroundColor: 'rgba(56, 189, 248, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
+    flexShrink: 0,
   },
   flatTagText: {
     color: '#38BDF8',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
   },
   purposeTag: {
     backgroundColor: 'rgba(249, 115, 22, 0.15)',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
+    maxWidth: '65%',
   },
   purposeTagText: {
     color: '#FB923C',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   timeTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 2,
   },
   timeTagText: {
     color: '#34D399',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
-  },
-  vehicleTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  vehicleTagText: {
-    color: '#94A3B8',
-    fontSize: 10,
   },
   btnCheckOut: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 10,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingVertical: 7,
   },
   btnCheckOutText: {
     color: '#F87171',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  historyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  historyThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    flexShrink: 0,
+  },
+  historyInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  historyTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  historyName: {
     fontSize: 12,
     fontWeight: '800',
+    color: '#FFFFFF',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 6,
+  },
+  historyPurpose: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  historyTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyTimeText: {
+    fontSize: 9,
+    color: '#64748B',
+  },
+  historyStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  badgeInside: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  badgeDeparted: {
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+  },
+  historyStatusText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  textInside: {
+    color: '#34D399',
+  },
+  textDeparted: {
+    color: '#94A3B8',
   },
 });
