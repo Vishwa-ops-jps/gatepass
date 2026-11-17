@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.gatepass.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#064E3B",
         "foregroundImage": "./assets/android-icon-foreground.png",
