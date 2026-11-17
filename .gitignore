@@ -44,5 +44,4 @@ server/.env
 
 # Standalone APK binaries and local archives
 *.apk
-!server/public/GatePass.apk
 *.zip

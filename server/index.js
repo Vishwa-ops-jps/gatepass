@@ -17,8 +17,8 @@ const DB = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Official High-Speed Cloud Artifact CDN for GatePass Android APK (Build v4 - Excel Export + Fixed Mobile Layout)
-const CLOUD_APK_URL = 'https://expo.dev/artifacts/eas/swbFvA1cFyqWEKkUcYTrLIqWx57k93Xm-1KMp64HgTs.apk';
+// Official High-Speed Cloud Artifact CDN for GatePass Android APK (Build v5 - v1.0.1 - Full-Width Excel + 3-Col Layout)
+const CLOUD_APK_URL = 'https://expo.dev/artifacts/eas/8196hy__HxItdFHcGNo9f-DvC8WHAypy85Ie980pfBw.apk';
 
 // Resilient APK & Distribution Download Handlers (Always Succeeds)
 app.get(['/GatePass.apk', '/download/apk', '/api/download/apk'], (req, res) => {
