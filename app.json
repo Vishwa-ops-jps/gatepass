@@ -2,7 +2,7 @@
   "expo": {
     "name": "GatePass",
     "slug": "gatepass",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.gatepass.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#064E3B",
         "foregroundImage": "./assets/android-icon-foreground.png",

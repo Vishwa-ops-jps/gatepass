@@ -658,6 +658,7 @@ const styles = StyleSheet.create({
   },
   roleTab: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -678,6 +679,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#94A3B8',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   roleTabTextActive: {
     color: '#FFFFFF',
@@ -824,6 +827,7 @@ const styles = StyleSheet.create({
   },
   gatePill: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -842,6 +846,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: colors.textSecondary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   gatePillTextSelected: {
     color: '#FFFFFF',

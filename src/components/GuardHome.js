@@ -21,14 +21,19 @@ const PRESET_PHOTOS = {
 
 const FLAT_PRESETS = ['B-402', 'A-104', 'C-201', 'A-101', 'B-101'];
 
-const PURPOSES = [
+const PURPOSES_ROW_1 = [
   { id: 'delivery', label: 'Delivery', icon: 'bicycle', desc: 'Food / Parcel Delivery' },
   { id: 'guest', label: 'Guest', icon: 'people', desc: 'Friend / Family Visit' },
   { id: 'cab', label: 'Cab / Taxi', icon: 'car', desc: 'Uber / Ola Pickup' },
+];
+
+const PURPOSES_ROW_2 = [
   { id: 'service', label: 'Service / Tech', icon: 'construct', desc: 'AC / Plumbing / Repair' },
   { id: 'courier', label: 'Courier / Post', icon: 'cube', desc: 'Amazon / Courier Partner' },
   { id: 'other', label: 'Other Visit', icon: 'door-open', desc: 'Official / Other Entry' },
 ];
+
+const ALL_PURPOSES = [...PURPOSES_ROW_1, ...PURPOSES_ROW_2];
 
 export default function GuardHome({
   onDirectVisitorEntry,
@@ -105,7 +110,7 @@ export default function GuardHome({
       return;
     }
 
-    const purposeObj = PURPOSES.find((p) => p.id === selectedPurpose) || PURPOSES[0];
+    const purposeObj = ALL_PURPOSES.find((p) => p.id === selectedPurpose) || ALL_PURPOSES[0];
     const name = visitorName.trim() || (selectedPurpose === 'delivery' ? 'Delivery Partner' : 'Visitor');
     const photo = capturedPhoto || PRESET_PHOTOS.guest;
 
@@ -157,21 +162,21 @@ export default function GuardHome({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 50 }}
+      contentContainerStyle={{ paddingBottom: 60 }}
       showsVerticalScrollIndicator={false}
     >
       {/* ==================== 1. LOG VISITOR ENTRY PANEL ==================== */}
       <View style={styles.panel}>
         <View style={styles.panelHeader}>
-          <View style={{ flex: 1, marginRight: 8 }}>
+          <View style={{ flex: 1, marginRight: 6 }}>
             <View style={styles.panelTitleRow}>
-              <Ionicons name="camera" size={18} color="#10B981" />
+              <Ionicons name="camera" size={17} color="#10B981" style={{ marginRight: 6 }} />
               <Text style={styles.panelTitle}>Log Visitor Entry</Text>
             </View>
             <Text style={styles.panelSubtitle}>Take visitor photo, enter flat & purpose</Text>
           </View>
           <View style={styles.autoPersistBadge}>
-            <Ionicons name="save-outline" size={11} color="#34D399" />
+            <Ionicons name="save-outline" size={11} color="#34D399" style={{ marginRight: 3 }} />
             <Text style={styles.autoPersistText}>Auto-Persist</Text>
           </View>
         </View>
@@ -186,7 +191,7 @@ export default function GuardHome({
               <Image source={{ uri: capturedPhoto }} style={styles.photoImg} />
             ) : (
               <View style={styles.photoEmpty}>
-                <Ionicons name="camera" size={26} color="#64748B" />
+                <Ionicons name="camera" size={24} color="#64748B" />
                 <Text style={styles.photoEmptyText}>Open Cam</Text>
               </View>
             )}
@@ -195,11 +200,11 @@ export default function GuardHome({
           <View style={styles.photoControls}>
             <View style={styles.photoBtnRow}>
               <TouchableOpacity style={styles.btnSnap} onPress={handleTakePhoto} activeOpacity={0.85}>
-                <Ionicons name="camera" size={14} color="#FFFFFF" />
+                <Ionicons name="camera" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
                 <Text style={styles.btnSnapText}>Take Photo</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnUpload} onPress={handlePickPhoto} activeOpacity={0.85}>
-                <Ionicons name="cloud-upload-outline" size={14} color="#FFFFFF" />
+                <Ionicons name="cloud-upload-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
                 <Text style={styles.btnUploadText}>Upload</Text>
               </TouchableOpacity>
             </View>
@@ -272,12 +277,14 @@ export default function GuardHome({
           ))}
         </View>
 
-        {/* Purpose of Visit Grid (3 equal columns) */}
+        {/* Purpose of Visit Grid (2 rows x 3 columns = 100% Mobile Safe) */}
         <Text style={styles.label}>
           Purpose of Visit <Text style={styles.req}>*</Text>
         </Text>
-        <View style={styles.purposeGrid}>
-          {PURPOSES.map((pur) => (
+        
+        {/* Row 1 */}
+        <View style={styles.purposeRow}>
+          {PURPOSES_ROW_1.map((pur) => (
             <TouchableOpacity
               key={pur.id}
               style={[styles.purposeBtn, selectedPurpose === pur.id && styles.purposeBtnActive]}
@@ -285,7 +292,30 @@ export default function GuardHome({
             >
               <Ionicons
                 name={pur.icon}
-                size={17}
+                size={16}
+                color={selectedPurpose === pur.id ? '#34D399' : '#94A3B8'}
+              />
+              <Text
+                style={[styles.purposeBtnText, selectedPurpose === pur.id && styles.purposeBtnTextActive]}
+                numberOfLines={1}
+              >
+                {pur.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Row 2 */}
+        <View style={styles.purposeRow}>
+          {PURPOSES_ROW_2.map((pur) => (
+            <TouchableOpacity
+              key={pur.id}
+              style={[styles.purposeBtn, selectedPurpose === pur.id && styles.purposeBtnActive]}
+              onPress={() => setSelectedPurpose(pur.id)}
+            >
+              <Ionicons
+                name={pur.icon}
+                size={16}
                 color={selectedPurpose === pur.id ? '#34D399' : '#94A3B8'}
               />
               <Text
@@ -309,19 +339,19 @@ export default function GuardHome({
           autoCapitalize="characters"
         />
 
-        {/* Primary Submit Button (Clean inline flex, no overflow) */}
+        {/* Primary Submit Button (Guaranteed Zero Overflow) */}
         <TouchableOpacity style={styles.btnSubmit} onPress={handleAllowEntry} activeOpacity={0.88}>
-          <Ionicons name="enter-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-          <Text style={styles.btnSubmitText}>ALLOW ENTRY & SAVE TO REGISTER</Text>
+          <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.btnSubmitText}>ALLOW ENTRY & SAVE</Text>
         </TouchableOpacity>
       </View>
 
       {/* ==================== 2. CURRENTLY INSIDE CAMPUS ==================== */}
       <View style={styles.panel}>
         <View style={styles.panelHeader}>
-          <View style={{ flex: 1, marginRight: 8 }}>
+          <View style={{ flex: 1, marginRight: 6 }}>
             <View style={styles.panelTitleRow}>
-              <Ionicons name="business" size={18} color="#34D399" />
+              <Ionicons name="business" size={17} color="#34D399" style={{ marginRight: 6 }} />
               <Text style={styles.panelTitle}>Currently Inside Campus</Text>
             </View>
             <Text style={styles.panelSubtitle}>Tap "Check Out" when visitor departs</Text>
@@ -333,7 +363,7 @@ export default function GuardHome({
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={15} color="#64748B" />
+          <Ionicons name="search" size={14} color="#64748B" style={{ marginRight: 6 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search active visitors..."
@@ -346,7 +376,7 @@ export default function GuardHome({
         {/* Visitor Cards */}
         {filteredActiveVisitors.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Ionicons name="shield-outline" size={28} color="#475569" />
+            <Ionicons name="shield-outline" size={26} color="#475569" />
             <Text style={styles.emptyTitle}>No Visitors Currently Inside Campus</Text>
             <Text style={styles.emptySubtitle}>Log visitor entry above when they reach the gate.</Text>
           </View>
@@ -373,7 +403,7 @@ export default function GuardHome({
                         <Text style={styles.purposeTagText} numberOfLines={1}>{v.purpose || 'Visit'}</Text>
                       </View>
                       <View style={styles.timeTag}>
-                        <Ionicons name="time-outline" size={11} color="#34D399" />
+                        <Ionicons name="time-outline" size={11} color="#34D399" style={{ marginRight: 2 }} />
                         <Text style={styles.timeTagText}>In: {inTimeStr}</Text>
                       </View>
                     </View>
@@ -386,7 +416,7 @@ export default function GuardHome({
                   onPress={() => onCheckOutVisitor(v.id)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="log-out-outline" size={15} color="#F87171" style={{ marginRight: 4 }} />
+                  <Ionicons name="log-out-outline" size={14} color="#F87171" style={{ marginRight: 4 }} />
                   <Text style={styles.btnCheckOutText}>Check Out</Text>
                 </TouchableOpacity>
               </View>
@@ -398,26 +428,24 @@ export default function GuardHome({
       {/* ==================== 3. PERMANENT LOGBOOK & ARCHIVE (EXCEL SHEET) ==================== */}
       <View style={styles.panel}>
         <View style={styles.panelHeader}>
-          <View style={{ flex: 1, marginRight: 8 }}>
+          <View style={{ flex: 1, marginRight: 6 }}>
             <View style={styles.panelTitleRow}>
-              <Ionicons name="document-text" size={18} color="#FB923C" />
+              <Ionicons name="document-text" size={17} color="#FB923C" style={{ marginRight: 6 }} />
               <Text style={styles.panelTitle}>Permanent Visitor Logbook</Text>
             </View>
             <Text style={styles.panelSubtitle}>Historical register stored permanently with photos</Text>
           </View>
-
-          {/* Export to Excel Button */}
-          {onExportExcel ? (
-            <TouchableOpacity style={styles.btnExportExcelPanel} onPress={onExportExcel} activeOpacity={0.8}>
-              <Ionicons name="download-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.btnExportExcelPanelText}>Excel (CSV)</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
+
+        {/* PROMINENT EXCEL SHEET DOWNLOAD BUTTON */}
+        <TouchableOpacity style={styles.btnBigExcelExport} onPress={onExportExcel} activeOpacity={0.85}>
+          <Ionicons name="cloud-download-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.btnBigExcelExportText}>DOWNLOAD EXCEL SHEET (CSV)</Text>
+        </TouchableOpacity>
 
         {/* Filter search in archive */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={15} color="#64748B" />
+          <Ionicons name="search" size={14} color="#64748B" style={{ marginRight: 6 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search full logbook by name, flat, date..."
@@ -457,6 +485,11 @@ export default function GuardHome({
             </View>
           );
         })}
+
+        {/* Version Badge Stamp */}
+        <View style={styles.versionRow}>
+          <Text style={styles.versionText}>GatePass Security v1.0.1 (Build 5) • Excel Enabled</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -471,10 +504,10 @@ const styles = StyleSheet.create({
   },
   panel: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 14,
+    padding: 12,
     marginBottom: 14,
   },
   panelHeader: {
@@ -484,12 +517,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.06)',
     paddingBottom: 10,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   panelTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   panelTitle: {
     fontSize: 15,
@@ -504,29 +536,31 @@ const styles = StyleSheet.create({
   autoPersistBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   autoPersistText: {
     color: '#34D399',
     fontSize: 9,
     fontWeight: '800',
   },
-  btnExportExcelPanel: {
+  btnBigExcelExport: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 12,
   },
-  btnExportExcelPanelText: {
+  btnBigExcelExportText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   label: {
     fontSize: 11,
@@ -541,17 +575,16 @@ const styles = StyleSheet.create({
   photoSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 10,
   },
   photoPreviewBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 14,
+    width: 72,
+    height: 72,
+    borderRadius: 12,
     backgroundColor: '#1F2937',
     borderWidth: 1.5,
     borderColor: '#374151',
@@ -559,6 +592,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+    marginRight: 10,
   },
   photoImg: {
     width: '100%',
@@ -566,30 +600,29 @@ const styles = StyleSheet.create({
   },
   photoEmpty: {
     alignItems: 'center',
-    gap: 2,
   },
   photoEmptyText: {
     fontSize: 9,
     color: '#64748B',
     fontWeight: '700',
+    marginTop: 2,
   },
   photoControls: {
     flex: 1,
-    gap: 6,
   },
   photoBtnRow: {
     flexDirection: 'row',
-    gap: 6,
+    marginBottom: 6,
   },
   btnSnap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
     backgroundColor: '#10B981',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 7,
+    marginRight: 6,
   },
   btnSnapText: {
     color: '#FFFFFF',
@@ -601,12 +634,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 7,
   },
   btnUploadText: {
     color: '#E2E8F0',
@@ -616,22 +648,23 @@ const styles = StyleSheet.create({
   presetsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     flexWrap: 'wrap',
   },
   presetLabel: {
     fontSize: 9,
     color: '#64748B',
     fontWeight: '700',
-    marginRight: 2,
+    marginRight: 4,
   },
   presetChip: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginRight: 4,
+    marginBottom: 2,
   },
   presetChipActive: {
     backgroundColor: '#10B981',
@@ -649,9 +682,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '600',
@@ -659,16 +692,17 @@ const styles = StyleSheet.create({
   flatChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
     marginTop: 6,
   },
   flatChip: {
     backgroundColor: 'rgba(56, 189, 248, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.25)',
-    paddingHorizontal: 9,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
+    marginRight: 5,
+    marginBottom: 5,
   },
   flatChipActive: {
     backgroundColor: '#0284C7',
@@ -682,23 +716,21 @@ const styles = StyleSheet.create({
   flatChipTextActive: {
     color: '#FFFFFF',
   },
-  purposeGrid: {
+  purposeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 6,
+    marginBottom: 6,
   },
   purposeBtn: {
-    width: '31%',
+    flex: 1,
+    marginHorizontal: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 10,
+    borderRadius: 8,
     paddingVertical: 8,
-    paddingHorizontal: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
   },
   purposeBtnActive: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -708,6 +740,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 10,
     fontWeight: '700',
+    marginTop: 2,
     textAlign: 'center',
   },
   purposeBtnTextActive: {
@@ -720,22 +753,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 13,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    marginTop: 14,
-    overflow: 'hidden',
+    borderRadius: 10,
+    marginTop: 12,
   },
   btnSubmitText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '900',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   activeCounterBadge: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   activeCounterText: {
     color: '#34D399',
@@ -745,65 +776,65 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
     marginBottom: 10,
   },
   searchInput: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   emptyCard: {
     alignItems: 'center',
-    paddingVertical: 20,
-    gap: 4,
+    paddingVertical: 18,
   },
   emptyTitle: {
     color: '#CBD5E1',
     fontSize: 12,
     fontWeight: '700',
+    marginTop: 4,
   },
   emptySubtitle: {
     color: '#64748B',
     fontSize: 10,
+    marginTop: 2,
   },
   visitorCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 10,
     marginBottom: 8,
-    gap: 8,
   },
   visitorLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    marginBottom: 8,
   },
   visitorThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 8,
     backgroundColor: '#1E293B',
     flexShrink: 0,
+    marginRight: 9,
   },
   visitorInfo: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
   },
   visitorNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 3,
   },
   visitorName: {
     fontSize: 13,
@@ -828,15 +859,15 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     flexWrap: 'wrap',
   },
   purposeTag: {
     backgroundColor: 'rgba(249, 115, 22, 0.15)',
     paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
     maxWidth: '65%',
+    marginRight: 6,
   },
   purposeTagText: {
     color: '#FB923C',
@@ -846,7 +877,6 @@ const styles = StyleSheet.create({
   timeTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
   },
   timeTagText: {
     color: '#34D399',
@@ -860,8 +890,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 8,
-    paddingVertical: 7,
+    borderRadius: 7,
+    paddingVertical: 6,
   },
   btnCheckOutText: {
     color: '#F87171',
@@ -871,7 +901,6 @@ const styles = StyleSheet.create({
   historyCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.04)',
@@ -879,19 +908,20 @@ const styles = StyleSheet.create({
   historyThumb: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: '#1E293B',
     flexShrink: 0,
+    marginRight: 8,
   },
   historyInfo: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
   historyTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 2,
   },
   historyName: {
     fontSize: 12,
@@ -904,6 +934,7 @@ const styles = StyleSheet.create({
   historyPurpose: {
     fontSize: 10,
     color: '#94A3B8',
+    marginBottom: 2,
   },
   historyTimeRow: {
     flexDirection: 'row',
@@ -916,8 +947,9 @@ const styles = StyleSheet.create({
   historyStatusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
     flexShrink: 0,
+    marginLeft: 6,
   },
   badgeInside: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -934,5 +966,15 @@ const styles = StyleSheet.create({
   },
   textDeparted: {
     color: '#94A3B8',
+  },
+  versionRow: {
+    alignItems: 'center',
+    paddingTop: 10,
+    marginTop: 6,
+  },
+  versionText: {
+    fontSize: 9,
+    color: '#475569',
+    fontWeight: '700',
   },
 });

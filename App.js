@@ -175,13 +175,13 @@ export default function App() {
         </View>
 
         <View style={styles.headerRight}>
-          {/* Export Excel Button in Header */}
+          {/* Prominent Header Export Excel Button */}
           <TouchableOpacity
             style={styles.btnHeaderExcel}
             onPress={handleExportExcel}
             activeOpacity={0.8}
           >
-            <Ionicons name="document-text" size={13} color="#34D399" />
+            <Ionicons name="document-text" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.btnHeaderExcelText}>Export Excel</Text>
           </TouchableOpacity>
 
@@ -196,7 +196,7 @@ export default function App() {
       {/* Security Gate Terminal Sub-Header (Clean Stack to Prevent Overlap) */}
       <View style={styles.subHeader}>
         <View style={styles.subHeaderLeft}>
-          <Ionicons name="shield-checkmark" size={14} color="#10B981" />
+          <Ionicons name="shield-checkmark" size={14} color="#10B981" style={{ marginRight: 5 }} />
           <Text style={styles.subHeaderTitle} numberOfLines={1}>MAIN GATE #1 • VISITOR DESK</Text>
         </View>
         <View style={styles.officerBadge}>
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#0F172A',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -239,38 +239,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 32,
+    width: 110,
+    height: 30,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   btnHeaderExcel: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.35)',
-    paddingHorizontal: 8,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 10,
+    borderRadius: 8,
+    marginRight: 6,
   },
   btnHeaderExcelText: {
-    color: '#34D399',
+    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
   },
   dutyPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.3)',
   },
@@ -279,6 +275,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#10B981',
+    marginRight: 4,
   },
   dutyPillText: {
     color: '#34D399',
@@ -288,8 +285,8 @@ const styles = StyleSheet.create({
   },
   subHeader: {
     backgroundColor: '#111827',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -299,21 +296,20 @@ const styles = StyleSheet.create({
   subHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   subHeaderTitle: {
     color: '#E2E8F0',
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   officerBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   officerName: {
     color: '#94A3B8',
