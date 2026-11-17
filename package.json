@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node server/index.js",
     "build": "npm --prefix server install",
-    "postinstall": "npm --prefix server install",
+    "postinstall": "node -e \"if (require('fs').existsSync('server/package.json')) { require('child_process').execSync('npm --prefix server install', { stdio: 'inherit' }); }\"",
     "server": "node server/index.js",
     "expo": "expo start",
     "android": "expo start --android",
