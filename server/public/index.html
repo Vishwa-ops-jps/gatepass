@@ -648,7 +648,7 @@
     }
     .toast.show { transform: translateY(0); opacity: 1; }
 
-    /* ==================== RESPONSIVE DESIGN (ZERO OVERLAP) ==================== */
+    /* ==================== RESPONSIVE DESIGN (ZERO OVERLAP & CLEAN MOBILE FLOW) ==================== */
     @media (max-width: 1080px) {
       .container {
         grid-template-columns: 1fr;
@@ -658,128 +658,250 @@
     }
 
     @media (max-width: 768px) {
+      /* Mobile Header: Never sticky to avoid viewport obstruction, natural flow */
       .header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-        padding: 12px 14px;
+        position: relative !important;
+        top: auto !important;
+        height: auto !important;
+        min-height: unset !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px 16px !important;
+        background: #0A0E17 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        border-bottom: 1px solid var(--card-border) !important;
       }
       .header-left {
-        justify-content: space-between;
-        width: 100%;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        gap: 10px !important;
+      }
+      .logo-badge {
+        padding: 6px 12px !important;
+        font-size: 13px !important;
+      }
+      .station-title {
+        font-size: 13px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+      }
+      .station-sub {
+        font-size: 10px !important;
+        display: block !important;
+        color: var(--text-muted) !important;
       }
       .header-center {
-        justify-content: center;
-        width: 100%;
-        padding: 4px 0;
+        display: none !important; /* Hide to maintain compact clean header */
       }
+
+      /* Clean 2x2 Grid for Action Badges & Buttons */
       .header-right {
-        justify-content: space-between;
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin-top: 2px !important;
       }
-      .counter-badge {
-        flex: 1;
-        justify-content: center;
+      .counter-badge,
+      .btn-export-top,
+      .btn-apk {
+        width: 100% !important;
+        height: 38px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 10px !important;
+        font-size: 11px !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+        text-align: center !important;
       }
+
+      /* Single column container */
+      .container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        padding: 14px 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .panel {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 18px 14px !important;
+        border-radius: 18px !important;
+        gap: 14px !important;
+      }
+
+      /* Visitor Cards */
       .visitor-card {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-        padding: 14px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px !important;
+      }
+      .visitor-left {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+      }
+      .visitor-details {
+        flex: 1 !important;
+        min-width: 0 !important;
+      }
+      .visitor-name {
+        font-size: 14px !important;
+        word-break: break-word !important;
       }
       .visitor-card .btn-checkout {
-        width: 100%;
-        justify-content: center;
-        padding: 11px;
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 11px !important;
       }
+
       .camera-modal-backdrop {
-        padding: 12px;
+        padding: 12px !important;
       }
       .camera-modal-box {
-        padding: 16px;
-        border-radius: 18px;
-        max-height: 92vh;
-        gap: 12px;
+        padding: 16px !important;
+        border-radius: 18px !important;
+        max-height: 92vh !important;
+        gap: 12px !important;
       }
       .camera-viewport {
-        height: min(280px, 42vh);
+        height: min(280px, 42vh) !important;
       }
       .camera-face-guide {
-        width: 150px;
-        height: 190px;
+        width: 150px !important;
+        height: 190px !important;
       }
     }
 
     @media (max-width: 480px) {
       body {
-        overflow-x: hidden;
+        overflow-x: hidden !important;
       }
       .container {
-        padding: 10px 8px;
-        gap: 14px;
+        padding: 10px 8px !important;
+        gap: 14px !important;
       }
       .panel {
-        padding: 14px 12px;
-        border-radius: 16px;
-        gap: 14px;
-      }
-      .station-sub {
-        display: none;
+        padding: 16px 12px !important;
+        border-radius: 16px !important;
+        gap: 14px !important;
       }
       .station-title {
-        font-size: 12px;
+        font-size: 11px !important;
       }
-      .header-center {
-        display: none;
+      .station-sub {
+        display: none !important;
       }
-      .btn-export-top, .btn-apk {
-        padding: 6px 10px;
-        font-size: 11px;
-      }
+
+      /* Clean Photo Section */
       .photo-section {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 12px;
-        padding: 12px;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 12px !important;
+        padding: 12px !important;
+      }
+      .photo-preview-box {
+        width: 76px !important;
+        height: 76px !important;
+        border-radius: 14px !important;
+        flex-shrink: 0 !important;
       }
       .photo-controls {
-        width: 100%;
+        flex: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
       }
       .photo-btn-row {
-        width: 100%;
+        width: 100% !important;
+        display: flex !important;
+        gap: 6px !important;
       }
+      .btn-photo-action {
+        padding: 8px 6px !important;
+        font-size: 11px !important;
+        border-radius: 8px !important;
+      }
+      .quick-avatars {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        flex-wrap: wrap !important;
+        margin-top: 2px !important;
+      }
+      .avatar-chip {
+        padding: 3px 6px !important;
+        font-size: 9px !important;
+        border-radius: 8px !important;
+      }
+
+      /* Purpose Category Grid */
       .category-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
       }
       .category-btn {
-        padding: 8px 4px;
-        font-size: 11px;
-        gap: 4px;
+        padding: 8px 4px !important;
+        font-size: 11px !important;
+        gap: 4px !important;
       }
       .category-btn i {
-        font-size: 14px;
+        font-size: 14px !important;
       }
+
+      /* Flat Suggestion Chips */
+      .chip-group {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+      }
+      .chip {
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+      }
+
+      /* Full Width Submit Button */
+      .btn-submit {
+        width: 100% !important;
+        padding: 15px !important;
+        font-size: 14px !important;
+        font-weight: 900 !important;
+        border-radius: 12px !important;
+      }
+
+      /* Filter Bar in Archive */
       .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        padding: 10px;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        padding: 10px !important;
       }
       .filter-input, .filter-select {
-        width: 100%;
-        min-width: unset;
+        width: 100% !important;
+        min-width: unset !important;
+        box-sizing: border-box !important;
       }
+
       .toast {
-        bottom: 12px;
-        right: 12px;
-        left: 12px;
-        justify-content: center;
-        font-size: 13px;
-        padding: 12px 14px;
+        bottom: 12px !important;
+        right: 12px !important;
+        left: 12px !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        padding: 12px 14px !important;
       }
     }
   </style>
@@ -819,10 +941,10 @@
       <a href="/api/visitors/export" download class="btn-export-top" title="Export Visitor Register to Excel (CSV)">
         <i class="fa-solid fa-file-excel"></i> Export Excel
       </a>
-      <a href="/GatePass.apk" download="GatePass.apk" class="btn-apk" title="Download Android Mobile APK to Desktop / PC" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 800;">
+      <a href="/GatePass.apk" download="GatePass.apk" onclick="showToast('Starting GatePass Android APK download...')" class="btn-apk" title="Download Standalone Android APK to Phone / PC" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 800;">
         <i class="fa-solid fa-download"></i> Download APK
       </a>
-      <a href="/GatePass_APK_Package.zip" download="GatePass_APK_Package.zip" class="btn-apk" title="Download Shareable ZIP Package for WhatsApp / Drive" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38BDF8;">
+      <a href="/GatePass_APK_Package.zip" download="GatePass_APK_Package.zip" onclick="showToast('Downloading Shareable ZIP Package...')" class="btn-apk" title="Download Shareable ZIP Package for WhatsApp / Drive" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38BDF8;">
         <i class="fa-solid fa-file-zipper"></i> Share ZIP
       </a>
     </div>

@@ -8,6 +8,7 @@ process.on('uncaughtException', (err) => {
 
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { WebSocketServer, WebSocket } = require('ws');
@@ -15,6 +16,35 @@ const DB = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// Official High-Speed Cloud Artifact CDN for GatePass Android APK
+const CLOUD_APK_URL = 'https://expo.dev/artifacts/eas/dgfX27MrF5rgHWNaLKg9gukgSvd4YwL4HjSbJpbsBwU.apk';
+
+// Resilient APK & Distribution Download Handlers (Always Succeeds)
+app.get(['/GatePass.apk', '/download/apk', '/api/download/apk'], (req, res) => {
+  const localApkPath = path.join(__dirname, 'public', 'GatePass.apk');
+  if (fs.existsSync(localApkPath)) {
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    return res.download(localApkPath, 'GatePass.apk', (err) => {
+      if (err && !res.headersSent) {
+        res.redirect(CLOUD_APK_URL);
+      }
+    });
+  }
+  return res.redirect(CLOUD_APK_URL);
+});
+
+app.get(['/GatePass_APK_Package.zip', '/download/zip', '/api/download/zip'], (req, res) => {
+  const localZipPath = path.join(__dirname, 'public', 'GatePass_APK_Package.zip');
+  if (fs.existsSync(localZipPath)) {
+    return res.download(localZipPath, 'GatePass_APK_Package.zip', (err) => {
+      if (err && !res.headersSent) {
+        res.redirect(CLOUD_APK_URL);
+      }
+    });
+  }
+  return res.redirect(CLOUD_APK_URL);
+});
 
 // Middleware (Supports High-Resolution Camera Photo Captures)
 app.use(cors());
