@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { MongoClient } = require('mongodb');
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mongodb') ? process.env.DATABASE_URL : null);
 const dbName = process.env.MONGODB_DB_NAME || 'gatepass';
 const LOCAL_DB_PATH = path.join(__dirname, 'data', 'gatepass_db.json');
 
@@ -505,18 +505,28 @@ const DB = {
 
   async getAllVisitors(filter = {}) {
     const { date, month, flat, search } = filter;
-    let list = memStore.visitors || [];
+    let list = [];
 
-    if (date) {
-      list = list.filter((v) => v.date === date || (v.created_at && v.created_at.startsWith(date)));
+    if (isMongo) {
+      const query = {};
+      if (flat) query.flat = cleanFlat(flat);
+      if (date) query.date = date;
+      else if (month) query.month = month;
+      list = await many(col('visitors').find(query).sort({ created_at: -1 }));
+    } else {
+      list = memStore.visitors || [];
+      if (date) {
+        list = list.filter((v) => v.date === date || (v.created_at && v.created_at.startsWith(date)));
+      }
+      if (month) {
+        list = list.filter((v) => v.month === month || (v.created_at && v.created_at.startsWith(month)));
+      }
+      if (flat) {
+        const cFlat = cleanFlat(flat);
+        list = list.filter((v) => cleanFlat(v.flat) === cFlat);
+      }
     }
-    if (month) {
-      list = list.filter((v) => v.month === month || (v.created_at && v.created_at.startsWith(month)));
-    }
-    if (flat) {
-      const cFlat = cleanFlat(flat);
-      list = list.filter((v) => cleanFlat(v.flat) === cFlat);
-    }
+
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
