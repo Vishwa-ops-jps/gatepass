@@ -11,21 +11,26 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '../theme/colors';
-import { apiVerifyPasscode } from '../services/api';
-import ScannerModal from './ScannerModal';
-
-const QUICK_DELIVERY_TAGS = ['Zomato', 'Swiggy', 'Blinkit', 'Amazon', 'Zepto'];
 
 const PRESET_PHOTOS = {
   guest: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
   delivery: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop&q=80',
   cab: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-  service: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+  tech: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
 };
 
+const FLAT_PRESETS = ['Flat B-402', 'Flat A-104', 'Flat C-201', 'Flat A-101', 'Flat B-101'];
+
+const PURPOSES = [
+  { id: 'delivery', label: 'Delivery', icon: 'bicycle', desc: 'Food / Parcel Delivery' },
+  { id: 'guest', label: 'Guest', icon: 'people', desc: 'Friend / Family Visit' },
+  { id: 'cab', label: 'Cab / Taxi', icon: 'car', desc: 'Uber / Ola Pickup' },
+  { id: 'service', label: 'Service / Tech', icon: 'construct', desc: 'AC / Plumbing / Repair' },
+  { id: 'courier', label: 'Courier / Post', icon: 'cube', desc: 'Amazon / Courier Partner' },
+  { id: 'other', label: 'Other Visit', icon: 'door-open', desc: 'Official / Other Entry' },
+];
+
 export default function GuardHome({
-  onSendApprovalRequest,
   onDirectVisitorEntry,
   activeVisitors,
   onCheckOutVisitor,
@@ -33,13 +38,12 @@ export default function GuardHome({
   const [flatNo, setFlatNo] = useState('B-402');
   const [visitorName, setVisitorName] = useState('');
   const [phone, setPhone] = useState('');
-  const [passcode, setPasscode] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('delivery');
+  const [selectedPurpose, setSelectedPurpose] = useState('delivery');
   const [vehicleNo, setVehicleNo] = useState('');
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const [scannerVisible, setScannerVisible] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(PRESET_PHOTOS.delivery);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Take photo using device camera
+  // Live Camera capture
   const handleTakePhoto = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -64,7 +68,7 @@ export default function GuardHome({
     }
   };
 
-  // Upload photo from gallery
+  // Gallery photo upload
   const handlePickPhoto = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -84,353 +88,292 @@ export default function GuardHome({
     }
   };
 
-  const handleVerifyPasscode = async () => {
-    if (!passcode) {
-      Alert.alert('GatePass Verification', 'Please enter a 6-digit GatePass code');
-      return;
-    }
-    try {
-      const res = await apiVerifyPasscode(passcode);
-      Alert.alert('Passcode Validated ✅', res.message || 'Passcode is valid. Entry granted!');
-      setPasscode('');
-    } catch (e) {
-      Alert.alert('Verification Failed', e.message || 'Invalid or expired passcode.');
-    }
+  const handleSelectPreset = (key) => {
+    setCapturedPhoto(PRESET_PHOTOS[key] || PRESET_PHOTOS.guest);
+    if (key === 'delivery') setSelectedPurpose('delivery');
+    else if (key === 'cab') setSelectedPurpose('cab');
+    else if (key === 'tech') setSelectedPurpose('service');
+    else setSelectedPurpose('guest');
   };
 
-  const handleDirectCheckIn = () => {
-    if (!flatNo) {
+  const handleAllowEntry = () => {
+    if (!flatNo.trim()) {
       Alert.alert('Required', 'Please enter destination flat number (e.g. B-402)');
       return;
     }
-    const name = visitorName || (selectedCategory === 'delivery' ? 'Delivery Partner' : 'Visitor');
-    const photo = capturedPhoto || PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest;
+
+    const purposeObj = PURPOSES.find((p) => p.id === selectedPurpose) || PURPOSES[0];
+    const name = visitorName.trim() || (selectedPurpose === 'delivery' ? 'Delivery Partner' : 'Visitor');
+    const photo = capturedPhoto || PRESET_PHOTOS.guest;
 
     const payload = {
       name,
-      flat: flatNo.toUpperCase(),
-      phone: phone || '+91 98000 11222',
-      purpose: selectedCategory === 'delivery' ? 'Delivery (Zomato/Swiggy)' : selectedCategory === 'cab' ? 'Cab (Uber/Ola)' : `Visiting Flat ${flatNo}`,
-      category: selectedCategory,
-      vehicle: vehicleNo ? vehicleNo.toUpperCase() : null,
+      flat: flatNo.trim().toUpperCase(),
+      phone: phone.trim() || '+91 98000 11222',
+      purpose: purposeObj.desc,
+      category: selectedPurpose,
+      vehicle: vehicleNo.trim() ? vehicleNo.trim().toUpperCase() : null,
       photo,
     };
 
     if (onDirectVisitorEntry) {
       onDirectVisitorEntry(payload);
-    } else {
-      Alert.alert('Entry Logged ✅', `${name} entry recorded for Flat ${flatNo}.`);
     }
 
     setVisitorName('');
     setPhone('');
     setVehicleNo('');
-    setCapturedPhoto(null);
   };
 
-  const handleSendRequest = () => {
-    if (!flatNo) {
-      Alert.alert('Required', 'Please enter destination flat number');
-      return;
-    }
-    const name = visitorName || (selectedCategory === 'delivery' ? 'Delivery Partner' : 'Visitor');
-
-    const newRequest = {
-      id: 'req-' + Date.now(),
-      name: name,
-      phone: phone || '+91 99000 11222',
-      type: selectedCategory === 'delivery' ? 'Delivery' : 'Guest',
-      category: selectedCategory,
-      vehicle: vehicleNo ? vehicleNo.toUpperCase() : null,
-      gate: 'Main Gate 1',
-      time: 'Just now',
-      purpose: `Visiting Flat ${flatNo}`,
-      flat: flatNo,
-      status: 'pending',
-      image: PRESET_PHOTOS[selectedCategory] || PRESET_PHOTOS.guest,
-    };
-
-    onSendApprovalRequest(newRequest);
-    Alert.alert(
-      'Calling Resident Flat! 📞',
-      `Intercom ringing initiated at Flat ${flatNo} for ${name}. CCTV feed sent to resident.`
+  const filteredVisitors = activeVisitors.filter((v) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (v.name && v.name.toLowerCase().includes(q)) ||
+      (v.flat && v.flat.toLowerCase().includes(q)) ||
+      (v.purpose && v.purpose.toLowerCase().includes(q))
     );
-    setVisitorName('');
-    setPhone('');
-    setVehicleNo('');
-  };
+  });
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Guard Status & Live Shift Banner */}
-      <View style={styles.guardBanner}>
-        <View style={styles.guardBannerLeft}>
-          <View style={styles.shieldIconBox}>
-            <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      
+      {/* ==================== 1. LOG VISITOR ENTRY PANEL ==================== */}
+      <View style={styles.panel}>
+        <View style={styles.panelHeader}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.panelTitleRow}>
+              <Ionicons name="camera" size={20} color="#10B981" />
+              <Text style={styles.panelTitle}>Log Visitor Entry</Text>
+            </View>
+            <Text style={styles.panelSubtitle}>Take visitor photo, enter flat & purpose — saved permanently to disk</Text>
           </View>
-          <View>
-            <Text style={styles.guardGateText}>SECURITY TERMINAL • GATE #1</Text>
-            <Text style={styles.guardOfficerText}>Duty Guard: Rajesh Kumar</Text>
+          <View style={styles.autoPersistBadge}>
+            <Ionicons name="save-outline" size={12} color="#34D399" />
+            <Text style={styles.autoPersistText}>Auto-Persist</Text>
           </View>
         </View>
-        <View style={styles.liveIndicator}>
-          <View style={styles.liveGreenDot} />
-          <Text style={styles.liveText}>GATE ACTIVE</Text>
-        </View>
-      </View>
 
-      {/* Guard Shift Metrics */}
-      <View style={styles.metricsRow}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricVal}>48</Text>
-          <Text style={styles.metricLabel}>Entries Today</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={[styles.metricVal, { color: colors.secondary }]}>
-            {activeVisitors.length}
-          </Text>
-          <Text style={styles.metricLabel}>Inside Now</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={[styles.metricVal, { color: colors.success }]}>16</Text>
-          <Text style={styles.metricLabel}>Pre-Approved</Text>
-        </View>
-      </View>
-
-      {/* QR Scanner & Passcode Validation Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="qr-code-outline" size={20} color={colors.secondary} />
-          <Text style={styles.cardTitle}>Verify GatePass (Scan / Code)</Text>
-        </View>
-        <Text style={styles.cardSub}>
-          Scan visitor QR pass or verify 6-digit OTP code
+        {/* Visitor Photo Capture Section */}
+        <Text style={styles.label}>
+          Visitor Photo <Text style={styles.req}>*</Text>
         </Text>
-
-        <View style={styles.passcodeRow}>
-          <TextInput
-            style={styles.passcodeInput}
-            placeholder="e.g. GP-7821"
-            placeholderTextColor="#94A3B8"
-            value={passcode}
-            onChangeText={setPasscode}
-            autoCapitalize="characters"
-          />
-          <TouchableOpacity
-            style={styles.verifyBtn}
-            onPress={handleVerifyPasscode}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="checkmark-done" size={18} color="#FFFFFF" />
-            <Text style={styles.verifyBtnText}>Verify</Text>
-          </TouchableOpacity>
-
-          {/* Open Camera Scanner */}
-          <TouchableOpacity
-            style={styles.cameraBtn}
-            onPress={() => setScannerVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="camera" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Manual Check-In & Intercom Call Form */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="person-add-outline" size={20} color={colors.primary} />
-          <Text style={styles.cardTitle}>Visitor Check-In & Ring Flat</Text>
-        </View>
-
-        {/* Visitor Photo Live Capture Box */}
-        <View style={styles.photoCaptureRow}>
-          <TouchableOpacity
-            style={styles.photoCaptureBox}
-            onPress={handleTakePhoto}
-            activeOpacity={0.8}
-          >
+        <View style={styles.photoSection}>
+          <TouchableOpacity style={styles.photoPreviewBox} onPress={handleTakePhoto} activeOpacity={0.8}>
             {capturedPhoto ? (
-              <Image source={{ uri: capturedPhoto }} style={styles.photoCapturedImg} />
+              <Image source={{ uri: capturedPhoto }} style={styles.photoImg} />
             ) : (
-              <View style={styles.photoEmptyPlaceholder}>
-                <Ionicons name="camera" size={24} color="#94A3B8" />
-                <Text style={styles.photoEmptyText}>Take Photo</Text>
+              <View style={styles.photoEmpty}>
+                <Ionicons name="camera" size={28} color="#64748B" />
+                <Text style={styles.photoEmptyText}>Open Cam</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <View style={styles.photoBtnStack}>
-            <TouchableOpacity style={styles.actionCamBtn} onPress={handleTakePhoto} activeOpacity={0.8}>
-              <Ionicons name="camera-reverse" size={16} color="#FFFFFF" />
-              <Text style={styles.actionCamBtnText}>Open Camera</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionGalleryBtn} onPress={handlePickPhoto} activeOpacity={0.8}>
-              <Ionicons name="image-outline" size={16} color="#94A3B8" />
-              <Text style={styles.actionGalleryBtnText}>From Gallery</Text>
-            </TouchableOpacity>
+          <View style={styles.photoControls}>
+            <View style={styles.photoBtnRow}>
+              <TouchableOpacity style={styles.btnSnap} onPress={handleTakePhoto} activeOpacity={0.85}>
+                <Ionicons name="camera" size={16} color="#FFFFFF" />
+                <Text style={styles.btnSnapText}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btnUpload} onPress={handlePickPhoto} activeOpacity={0.85}>
+                <Ionicons name="cloud-upload-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.btnUploadText}>Upload</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.presetsRow}>
+              <Text style={styles.presetLabel}>Quick Presets:</Text>
+              {['guest', 'delivery', 'cab', 'tech'].map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[styles.presetChip, capturedPhoto === PRESET_PHOTOS[p] && styles.presetChipActive]}
+                  onPress={() => handleSelectPreset(p)}
+                >
+                  <Text style={[styles.presetChipText, capturedPhoto === PRESET_PHOTOS[p] && styles.presetChipTextActive]}>
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
-        {/* Category Selector */}
-        <View style={styles.categoryRow}>
-          {[
-            { id: 'guest', label: 'Guest', icon: 'person' },
-            { id: 'delivery', label: 'Delivery', icon: 'bicycle' },
-            { id: 'cab', label: 'Cab', icon: 'car' },
-            { id: 'service', label: 'Staff', icon: 'construct' },
-          ].map((cat) => (
+        {/* Visitor Full Name */}
+        <Text style={styles.label}>
+          Visitor Full Name <Text style={styles.req}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.inputBox}
+          placeholder="e.g. Rahul Sharma or Swiggy Partner"
+          placeholderTextColor="#64748B"
+          value={visitorName}
+          onChangeText={setVisitorName}
+        />
+
+        {/* Mobile Phone Number */}
+        <Text style={styles.label}>Mobile Phone Number</Text>
+        <TextInput
+          style={styles.inputBox}
+          placeholder="e.g. 9876543210"
+          placeholderTextColor="#64748B"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+
+        {/* Visiting Flat / House # */}
+        <Text style={styles.label}>
+          Visiting Flat / House # <Text style={styles.req}>*</Text>
+        </Text>
+        <TextInput
+          style={styles.inputBox}
+          placeholder="E.G. B-402, A-104, C-201"
+          placeholderTextColor="#64748B"
+          value={flatNo}
+          onChangeText={setFlatNo}
+          autoCapitalize="characters"
+        />
+
+        {/* Quick Flat Chips */}
+        <View style={styles.flatChipsRow}>
+          {FLAT_PRESETS.map((flat) => (
             <TouchableOpacity
-              key={cat.id}
-              style={[
-                styles.catPill,
-                selectedCategory === cat.id && styles.catPillSelected,
-              ]}
-              onPress={() => setSelectedCategory(cat.id)}
+              key={flat}
+              style={[styles.flatChip, flatNo === flat.replace('Flat ', '') && styles.flatChipActive]}
+              onPress={() => setFlatNo(flat.replace('Flat ', ''))}
             >
-              <Ionicons
-                name={cat.icon}
-                size={14}
-                color={selectedCategory === cat.id ? '#FFFFFF' : colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.catText,
-                  selectedCategory === cat.id && styles.catTextSelected,
-                ]}
-              >
-                {cat.label}
+              <Text style={[styles.flatChipText, flatNo === flat.replace('Flat ', '') && styles.flatChipTextActive]}>
+                {flat}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Flat Number Input */}
-        <Text style={styles.inputLabel}>Visiting Flat Number *</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. B-402"
-          placeholderTextColor="#94A3B8"
-          value={flatNo}
-          onChangeText={setFlatNo}
-        />
-
-        {/* Visitor Name & Mobile */}
-        <Text style={styles.inputLabel}>Visitor Name</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="e.g. Sunil Verma / Zomato Rider"
-          placeholderTextColor="#94A3B8"
-          value={visitorName}
-          onChangeText={setVisitorName}
-        />
-
-        <View style={styles.twoCol}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>Mobile No.</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="9876543210"
-              placeholderTextColor="#94A3B8"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>Vehicle No.</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="KA-01-AB-1234"
-              placeholderTextColor="#94A3B8"
-              value={vehicleNo}
-              onChangeText={setVehicleNo}
-            />
-          </View>
+        {/* Purpose of Visit Grid */}
+        <Text style={styles.label}>
+          Purpose of Visit <Text style={styles.req}>*</Text>
+        </Text>
+        <View style={styles.purposeGrid}>
+          {PURPOSES.map((pur) => (
+            <TouchableOpacity
+              key={pur.id}
+              style={[styles.purposeBtn, selectedPurpose === pur.id && styles.purposeBtnActive]}
+              onPress={() => setSelectedPurpose(pur.id)}
+            >
+              <Ionicons
+                name={pur.icon}
+                size={18}
+                color={selectedPurpose === pur.id ? '#34D399' : '#94A3B8'}
+              />
+              <Text style={[styles.purposeBtnText, selectedPurpose === pur.id && styles.purposeBtnTextActive]}>
+                {pur.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Quick preset partner tags for delivery */}
-        {selectedCategory === 'delivery' && (
-          <View style={styles.presetTags}>
-            {QUICK_DELIVERY_TAGS.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={styles.tagBtn}
-                onPress={() => setVisitorName(`${tag} Partner`)}
-              >
-                <Text style={styles.tagBtnText}>+ {tag}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        {/* Vehicle Number (Optional) */}
+        <Text style={styles.label}>Vehicle Number (Optional)</Text>
+        <TextInput
+          style={styles.inputBox}
+          placeholder="e.g. KA-04-AB-1234"
+          placeholderTextColor="#64748B"
+          value={vehicleNo}
+          onChangeText={setVehicleNo}
+          autoCapitalize="characters"
+        />
 
-        {/* Primary Direct Check-In Action (Replacing Manual Paper Writing) */}
-        <TouchableOpacity
-          style={[styles.sendAlertBtn, { backgroundColor: '#10B981', marginBottom: 10 }]}
-          onPress={handleDirectCheckIn}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-          <Text style={[styles.sendAlertBtnText, { fontWeight: '900' }]}>ALLOW ENTRY & SAVE TO REGISTER</Text>
-        </TouchableOpacity>
-
-        {/* Secondary Option: Resident Intercom Call */}
-        <TouchableOpacity
-          style={[styles.sendAlertBtn, { backgroundColor: '#1E293B', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}
-          onPress={handleSendRequest}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="call" size={16} color="#94A3B8" />
-          <Text style={[styles.sendAlertBtnText, { color: '#CBD5E1', fontSize: 13 }]}>Call Flat {flatNo} Intercom</Text>
+        {/* Primary Submit Button */}
+        <TouchableOpacity style={styles.btnSubmit} onPress={handleAllowEntry} activeOpacity={0.88}>
+          <Ionicons name="enter-outline" size={22} color="#FFFFFF" />
+          <Text style={styles.btnSubmitText}>ALLOW ENTRY & SAVE TO REGISTER</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Visitors Currently Inside Society (with Overstay Tracker) */}
-      <View style={[styles.card, { marginBottom: 30 }]}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="log-in-outline" size={20} color={colors.primary} />
-          <Text style={styles.cardTitle}>Visitors Inside Campus ({activeVisitors.length})</Text>
-        </View>
-
-        {activeVisitors.map((v, idx) => {
-          const isOverstay = idx === 0; // Simulate overstay indicator
-          return (
-            <View key={v.id} style={styles.insideItem}>
-              <View style={styles.insideAvatar}>
-                <Ionicons name="person" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.insideDetails}>
-                <View style={styles.insideNameRow}>
-                  <Text style={styles.insideName}>{v.name}</Text>
-                  {isOverstay && (
-                    <View style={styles.overstayBadge}>
-                      <Text style={styles.overstayText}>Overstay 45m</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.insideMeta}>
-                  Visiting {v.flat || 'B-402'} • In since {v.inTime || '11:15 AM'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.checkoutBtn}
-                onPress={() => onCheckOutVisitor(v.id)}
-              >
-                <Text style={styles.checkoutBtnText}>Check Out</Text>
-              </TouchableOpacity>
+      {/* ==================== 2. CURRENTLY INSIDE CAMPUS ==================== */}
+      <View style={styles.panel}>
+        <View style={styles.panelHeader}>
+          <View>
+            <View style={styles.panelTitleRow}>
+              <Ionicons name="business" size={20} color="#34D399" />
+              <Text style={styles.panelTitle}>Currently Inside Campus</Text>
             </View>
-          );
-        })}
+            <Text style={styles.panelSubtitle}>Click "Check Out" when the visitor exits the gate</Text>
+          </View>
+          <View style={styles.activeCounterBadge}>
+            <Text style={styles.activeCounterText}>{activeVisitors.length} Active</Text>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={16} color="#64748B" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by visitor name, flat #, or phone..."
+            placeholderTextColor="#64748B"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* Visitor Cards */}
+        {filteredVisitors.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="shield-outline" size={32} color="#475569" />
+            <Text style={styles.emptyTitle}>No Visitors Currently Inside Campus</Text>
+            <Text style={styles.emptySubtitle}>Log an entry above when a visitor arrives at the gate.</Text>
+          </View>
+        ) : (
+          filteredVisitors.map((v) => {
+            const photoUri = v.image || PRESET_PHOTOS[v.category] || PRESET_PHOTOS.guest;
+            const inTimeStr = v.inTime || 'Just now';
+
+            return (
+              <View key={v.id} style={styles.visitorCard}>
+                <View style={styles.visitorLeft}>
+                  <Image source={{ uri: photoUri }} style={styles.visitorThumb} />
+                  <View style={styles.visitorInfo}>
+                    <View style={styles.visitorNameRow}>
+                      <Text style={styles.visitorName}>{v.name}</Text>
+                      <View style={styles.flatTag}>
+                        <Text style={styles.flatTagText}>Flat {v.flat}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.metaRow}>
+                      <View style={styles.purposeTag}>
+                        <Text style={styles.purposeTagText}>{v.purpose || 'Visit'}</Text>
+                      </View>
+                      <View style={styles.timeTag}>
+                        <Ionicons name="time-outline" size={12} color="#34D399" />
+                        <Text style={styles.timeTagText}>In: {inTimeStr}</Text>
+                      </View>
+                      {v.vehicle ? (
+                        <View style={styles.vehicleTag}>
+                          <Ionicons name="car-outline" size={12} color="#94A3B8" />
+                          <Text style={styles.vehicleTagText}>{v.vehicle}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Check Out Button */}
+                <TouchableOpacity
+                  style={styles.btnCheckOut}
+                  onPress={() => onCheckOutVisitor(v.id)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="log-out-outline" size={16} color="#F87171" />
+                  <Text style={styles.btnCheckOutText}>Check Out</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
       </View>
 
-      {/* Scanner Viewfinder Modal */}
-      <ScannerModal
-        visible={scannerVisible}
-        onClose={() => setScannerVisible(false)}
-        onScanSuccess={({ code, name }) => {
-          setPasscode(code);
-        }}
-      />
     </ScrollView>
   );
 }
@@ -438,359 +381,396 @@ export default function GuardHome({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    backgroundColor: '#0A0E1A',
+    paddingHorizontal: 14,
+    paddingTop: 12,
   },
-  guardBanner: {
-    backgroundColor: colors.secondary,
-    borderRadius: 16,
-    padding: 14,
+  panel: {
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+    marginBottom: 16,
+  },
+  panelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  guardBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  shieldIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  guardGateText: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  guardOfficerText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  liveGreenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  liveText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 10,
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    paddingBottom: 12,
     marginBottom: 14,
   },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 10,
+  panelTitleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    gap: 8,
   },
-  metricVal: {
-    fontSize: 20,
+  panelTitle: {
+    fontSize: 16,
     fontWeight: '900',
-    color: colors.primaryDark,
+    color: '#FFFFFF',
   },
-  metricLabel: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    fontWeight: '700',
+  panelSubtitle: {
+    fontSize: 11,
+    color: '#94A3B8',
     marginTop: 2,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.primaryDark,
-  },
-  cardSub: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  passcodeRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  passcodeInput: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  verifyBtn: {
-    backgroundColor: colors.primary,
+  autoPersistBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
-  verifyBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
+  autoPersistText: {
+    color: '#34D399',
+    fontSize: 10,
+    fontWeight: '800',
   },
-  cameraBtn: {
-    backgroundColor: colors.secondary,
-    width: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+  label: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#CBD5E1',
+    marginBottom: 6,
+    marginTop: 10,
   },
-  photoCaptureRow: {
+  req: {
+    color: '#EF4444',
+  },
+  photoSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#F8FAFC',
+    gap: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#CBD5E1',
-    borderRadius: 14,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
     padding: 12,
-    marginBottom: 14,
   },
-  photoCaptureBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 14,
-    backgroundColor: '#E2E8F0',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+  photoPreviewBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: '#1F2937',
+    borderWidth: 2,
+    borderColor: '#374151',
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  photoCapturedImg: {
+  photoImg: {
     width: '100%',
     height: '100%',
   },
-  photoEmptyPlaceholder: {
+  photoEmpty: {
     alignItems: 'center',
     gap: 2,
   },
   photoEmptyText: {
     fontSize: 9,
-    fontWeight: '700',
     color: '#64748B',
+    fontWeight: '700',
   },
-  photoBtnStack: {
+  photoControls: {
     flex: 1,
     gap: 8,
   },
-  actionCamBtn: {
+  photoBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btnSnap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     backgroundColor: '#10B981',
+    paddingVertical: 9,
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
   },
-  actionCamBtnText: {
+  btnSnapText: {
     color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '800',
-    fontSize: 12,
   },
-  actionGalleryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-  },
-  actionGalleryBtnText: {
-    color: '#64748B',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  catPill: {
+  btnUpload: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 9,
     borderRadius: 10,
-    backgroundColor: '#F1F5F9',
   },
-  catPillSelected: {
-    backgroundColor: colors.primary,
+  btnUploadText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '800',
   },
-  catText: {
-    fontSize: 11,
+  presetsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  presetLabel: {
+    fontSize: 10,
+    color: '#64748B',
     fontWeight: '700',
-    color: colors.textSecondary,
   },
-  catTextSelected: {
+  presetChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  presetChipActive: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  presetChipText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '700',
+  },
+  presetChipTextActive: {
     color: '#FFFFFF',
   },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: 4,
-    marginTop: 6,
-  },
-  textInput: {
-    backgroundColor: '#F8FAFC',
+  inputBox: {
+    backgroundColor: '#0F172A',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
-  twoCol: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  presetTags: {
+  flatChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
-  tagBtn: {
-    backgroundColor: '#FFF7ED',
+  flatChip: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  flatChipActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#38BDF8',
+  },
+  flatChipText: {
+    color: '#38BDF8',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  flatChipTextActive: {
+    color: '#FFFFFF',
+  },
+  purposeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  purposeBtn: {
+    width: '31%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 4,
+  },
+  purposeBtnActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: '#10B981',
+  },
+  purposeBtnText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  purposeBtnTextActive: {
+    color: '#34D399',
+    fontWeight: '800',
+  },
+  btnSubmit: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 18,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  btnSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  activeCounterBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderRadius: 10,
   },
-  tagBtnText: {
+  activeCounterText: {
+    color: '#34D399',
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.secondaryDark,
+    fontWeight: '800',
   },
-  sendAlertBtn: {
-    backgroundColor: colors.secondary,
+  searchBar: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
-    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
   },
-  sendAlertBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  insideItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  insideAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  insideDetails: {
+  searchInput: {
     flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  insideNameRow: {
-    flexDirection: 'row',
+  emptyCard: {
     alignItems: 'center',
+    paddingVertical: 24,
     gap: 6,
   },
-  insideName: {
+  emptyTitle: {
+    color: '#CBD5E1',
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
-  overstayBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
+  emptySubtitle: {
+    color: '#64748B',
+    fontSize: 11,
   },
-  overstayText: {
-    fontSize: 9,
+  visitorCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    gap: 10,
+  },
+  visitorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  visitorThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+  },
+  visitorInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  visitorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  visitorName: {
+    fontSize: 14,
     fontWeight: '800',
-    color: '#DC2626',
+    color: '#FFFFFF',
   },
-  insideMeta: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
+  flatTag: {
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  checkoutBtn: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+  flatTagText: {
+    color: '#38BDF8',
+    fontSize: 10,
+    fontWeight: '800',
   },
-  checkoutBtnText: {
-    fontSize: 11,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  purposeTag: {
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  purposeTagText: {
+    color: '#FB923C',
+    fontSize: 10,
     fontWeight: '700',
-    color: colors.danger,
+  },
+  timeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  timeTagText: {
+    color: '#34D399',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  vehicleTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  vehicleTagText: {
+    color: '#94A3B8',
+    fontSize: 10,
+  },
+  btnCheckOut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    paddingVertical: 8,
+  },
+  btnCheckOutText: {
+    color: '#F87171',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

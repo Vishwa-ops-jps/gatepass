@@ -1370,7 +1370,15 @@
 
       container.innerHTML = visitors.map(v => {
         const photo = v.image || PRESET_PHOTOS[v.category] || PRESET_PHOTOS.guest;
-        const inTime = v.in_time_display || (v.in_time ? new Date(v.in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now');
+        let inTime = v.in_time_display || v.in_time || 'Just now';
+        if (typeof inTime === 'string' && (inTime.includes('T') || inTime.includes('-'))) {
+          try {
+            const d = new Date(inTime);
+            if (!isNaN(d.getTime())) {
+              inTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+          } catch (e) {}
+        }
         
         return `
           <div class="visitor-card">
@@ -1455,8 +1463,20 @@
         const photo = v.image || PRESET_PHOTOS[v.category] || PRESET_PHOTOS.guest;
         const isOut = v.status === 'checked_out';
         const dateStr = v.date || (v.created_at ? v.created_at.split('T')[0] : 'Today');
-        const inTime = v.in_time_display || (v.in_time ? new Date(v.in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
-        const outTime = v.out_time_display || (v.out_time ? new Date(v.out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
+        let inTime = v.in_time_display || v.in_time || '—';
+        if (typeof inTime === 'string' && (inTime.includes('T') || inTime.includes('-'))) {
+          try {
+            const d = new Date(inTime);
+            if (!isNaN(d.getTime())) inTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } catch (e) {}
+        }
+        let outTime = v.out_time_display || v.out_time || '—';
+        if (typeof outTime === 'string' && (outTime.includes('T') || outTime.includes('-'))) {
+          try {
+            const d = new Date(outTime);
+            if (!isNaN(d.getTime())) outTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } catch (e) {}
+        }
         const duration = v.duration || (isOut ? 'Recorded' : 'Inside Now');
 
         return `
