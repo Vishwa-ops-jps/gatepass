@@ -1,3 +1,11 @@
+// Prevent unhandled promise rejections or transient database pool errors from exiting server
+process.on('unhandledRejection', (reason) => {
+  console.warn('[Server Warning] Unhandled Rejection:', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+  console.warn('[Server Warning] Caught Exception:', err?.message || err);
+});
+
 const http = require('http');
 const path = require('path');
 const express = require('express');

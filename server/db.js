@@ -124,11 +124,17 @@ async function initSchema() {
     try {
       console.log('[GatePass Database] Connecting to MongoDB Atlas / Cloud Cluster...');
       client = new MongoClient(uri, {
-        maxPoolSize: 20,
-        minPoolSize: 2,
-        maxIdleTimeMS: 300000,
-        connectTimeoutMS: 10000,
-        serverSelectionTimeoutMS: 5000,
+        maxPoolSize: 10,
+        minPoolSize: 0,
+        connectTimeoutMS: 20000,
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+        retryWrites: true,
+        retryReads: true,
+      });
+
+      client.on('error', (err) => {
+        console.warn('[GatePass Database] MongoDB Pool Warning:', err.message);
       });
       await client.connect();
       database = client.db(dbName);
