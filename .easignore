@@ -1,0 +1,11 @@
+# Ignore large binaries and archives from EAS cloud build upload
+*.apk
+*.zip
+apk/
+server/
+dist/
+web-build/
+.expo/
+node_modules/
+.git/
+*.log
