@@ -157,16 +157,15 @@ async function initSchema() {
         console.log('[GatePass Database] Note: Using existing database indexes.');
       }
 
-      // Seed if empty
-      const userCount = await database.collection('users').countDocuments();
-      if (userCount === 0) {
-        console.log('[GatePass Database] Seeding initial data into MongoDB...');
-        for (const c of collections) {
-          if (memStore[c] && memStore[c].length > 0) {
-            await database.collection(c).insertMany(memStore[c]);
+      // Seed any empty collection
+      for (const c of collections) {
+        if (memStore[c] && memStore[c].length > 0) {
+          const count = await database.collection(c).countDocuments();
+          if (count === 0) {
+            await database.collection(c).insertMany(memStore[c].map(item => ({ ...item })));
+            console.log(`[GatePass Database] Seeded ${memStore[c].length} default records into collection "${c}".`);
           }
         }
-        console.log('[GatePass Database] MongoDB initial seeding complete.');
       }
       return;
     } catch (err) {
