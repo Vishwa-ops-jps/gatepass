@@ -130,7 +130,7 @@ export async function apiLogVisitorEntry(data) {
 export async function apiGetAllVisitors(params = {}) {
   try {
     const query = new URLSearchParams(params).toString();
-    const res = await apiRequest(`/visitors${query ? `?${query}` : ''}`);
+    const res = await apiRequest(`/visitors/history${query ? `?${query}` : ''}`);
     return Array.isArray(res) ? res : [];
   } catch (e) {
     return [];

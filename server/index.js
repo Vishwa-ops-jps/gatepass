@@ -515,7 +515,7 @@ app.put('/api/visitors/:id/checkout', async (req, res) => {
 });
 
 // 5c. Complete Visitor Logbook History (Search & Monthly Audit)
-app.get('/api/visitors/history', async (req, res) => {
+app.get(['/api/visitors', '/api/visitors/history'], async (req, res) => {
   const { date, month, flat, search } = req.query;
   const list = await DB.getAllVisitors({ date, month, flat, search });
   res.json(list);

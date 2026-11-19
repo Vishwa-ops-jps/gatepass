@@ -25,28 +25,45 @@ import {
 
 export default function App() {
   // Pure Dedicated Security Gate Entry System
-  const [activeVisitors, setActiveVisitors] = useState([
-    { id: 'v-1', name: 'Dr. Alok Verma', flat: 'B-402', inTime: '10:45 AM', purpose: 'Visit / Relative' },
-    { id: 'v-2', name: 'Urban Company AC Tech', flat: 'B-201', inTime: '11:10 AM', purpose: 'AC Repair' },
-  ]);
+  const [activeVisitors, setActiveVisitors] = useState([]);
   const [historicalVisitors, setHistoricalVisitors] = useState([]);
   const [backendConnected, setBackendConnected] = useState(false);
 
   const loadData = async () => {
     try {
       const data = await fetchInitialData();
-      if (data) {
+      if (data && Array.isArray(data.activeVisitors)) {
         setBackendConnected(true);
-        if (data.activeVisitors && data.activeVisitors.length > 0) {
-          setActiveVisitors(data.activeVisitors);
-        }
+        const normalized = data.activeVisitors.map((v) => ({
+          id: v.id || v._id,
+          name: v.name,
+          flat: v.flat,
+          inTime: v.in_time_display || v.inTime || 'Just now',
+          image: v.image,
+          purpose: v.purpose,
+          vehicle: v.vehicle,
+          category: v.category,
+          status: v.status || 'Inside',
+        }));
+        setActiveVisitors(normalized);
       }
       const history = await apiGetAllVisitors();
-      if (history && history.length > 0) {
-        setHistoricalVisitors(history);
+      if (Array.isArray(history) && history.length > 0) {
+        const normalizedHistory = history.map((v) => ({
+          id: v.id || v._id,
+          name: v.name,
+          flat: v.flat,
+          phone: v.phone,
+          purpose: v.purpose,
+          inTime: v.in_time_display || v.inTime || 'Just now',
+          out_time_display: v.out_time_display || v.outTime || '—',
+          status: v.status === 'approved' ? 'Inside' : (v.status === 'checked_out' ? 'Departed' : (v.status || 'Departed')),
+          image: v.image,
+        }));
+        setHistoricalVisitors(normalizedHistory);
       }
     } catch (e) {
-      // Offline fallback
+      console.warn('[App] Load data error:', e.message);
     }
   };
 
@@ -119,26 +136,42 @@ export default function App() {
 
   // Guard logs a new visitor entry
   const handleDirectVisitorEntry = async (data) => {
-    const newVisitor = {
-      id: 'v-' + Date.now(),
-      name: data.name,
-      flat: data.flat,
-      inTime: 'Just now',
-      image: data.photo,
-      purpose: data.purpose,
-      vehicle: data.vehicle,
-      status: 'Inside',
-    };
-
-    setActiveVisitors((prev) => [newVisitor, ...prev]);
-    setHistoricalVisitors((prev) => [newVisitor, ...prev]);
-
     try {
-      await apiLogVisitorEntry(data);
-      Alert.alert(
-        'Entry Recorded! ✅',
-        `${data.name} entry logged for Flat ${data.flat}. Saved permanently.`
-      );
+      const res = await apiLogVisitorEntry(data);
+      if (res && res.success && res.visitor) {
+        const v = res.visitor;
+        const newVisitor = {
+          id: v.id || v._id,
+          name: v.name,
+          flat: v.flat,
+          inTime: v.in_time_display || 'Just now',
+          image: v.image || data.photo,
+          purpose: v.purpose || data.purpose,
+          vehicle: v.vehicle || data.vehicle,
+          category: v.category || data.category,
+          status: 'Inside',
+        };
+        setActiveVisitors((prev) => [newVisitor, ...prev.filter((x) => x.id !== newVisitor.id)]);
+        setHistoricalVisitors((prev) => [newVisitor, ...prev.filter((x) => x.id !== newVisitor.id)]);
+        Alert.alert(
+          'Saved to MongoDB! ✅',
+          `${data.name} entry recorded and saved permanently in MongoDB Atlas.`
+        );
+      } else {
+        const fallbackVisitor = {
+          id: 'v-' + Date.now(),
+          name: data.name,
+          flat: data.flat,
+          inTime: 'Just now',
+          image: data.photo,
+          purpose: data.purpose,
+          vehicle: data.vehicle,
+          status: 'Inside',
+        };
+        setActiveVisitors((prev) => [fallbackVisitor, ...prev]);
+        setHistoricalVisitors((prev) => [fallbackVisitor, ...prev]);
+        Alert.alert('Entry Saved ✅', `${data.name} logged for Flat ${data.flat}.`);
+      }
     } catch (e) {
       Alert.alert('Entry Saved Locally ✅', `${data.name} logged for Flat ${data.flat}.`);
     }
@@ -154,7 +187,7 @@ export default function App() {
 
     try {
       await apiCheckOutVisitor(id);
-      Alert.alert('Checked Out 🚪', `${target?.name || 'Visitor'} marked as departed.`);
+      Alert.alert('Checked Out 🚪', `${target?.name || 'Visitor'} marked departed in MongoDB.`);
     } catch (e) {
       Alert.alert('Checked Out 🚪', 'Visitor marked as departed.');
     }

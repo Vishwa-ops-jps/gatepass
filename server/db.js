@@ -11,7 +11,10 @@ if (fs.existsSync(serverEnv)) {
   try { process.loadEnvFile(rootEnv); } catch (e) {}
 }
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mongodb') ? process.env.DATABASE_URL : null);
+// Official MongoDB Atlas Cloud Cluster for GatePass (dtdc_kudlu_gate)
+const MONGODB_ATLAS_URI = 'mongodb://DTDC:nL9t9aL2t3p7GPrw@ac-ygjmiyk-shard-00-00.whrmpc4.mongodb.net:27017,ac-ygjmiyk-shard-00-01.whrmpc4.mongodb.net:27017,ac-ygjmiyk-shard-00-02.whrmpc4.mongodb.net:27017/dtdc_kudlu_gate?ssl=true&replicaSet=atlas-icmja0-shard-0&authSource=admin&retryWrites=true&w=majority';
+
+const uri = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mongodb') ? process.env.DATABASE_URL : null) || MONGODB_ATLAS_URI;
 const dbName = process.env.MONGODB_DB_NAME || 'dtdc_kudlu_gate';
 const LOCAL_DB_PATH = path.join(__dirname, 'data', 'gatepass_db.json');
 
