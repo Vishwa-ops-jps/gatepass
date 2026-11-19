@@ -745,16 +745,18 @@ app.post('/api/dev/reset-db', async (req, res) => {
   res.json({ success: true, message: 'Database reset and re-seeded successfully.' });
 });
 
-// Connect before accepting traffic so every route has a ready MongoDB handle.
-DB.initSchema()
-  .then(() => {
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`[GatePass Server] Running on http://0.0.0.0:${PORT} (${DB.getDatabaseInfo().type})`);
-      console.log(`[GatePass Server] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
-      console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
+// Start HTTP Server immediately so Render health checks succeed without timeout
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[GatePass Server] Running on http://0.0.0.0:${PORT}`);
+  console.log(`[GatePass Server] API Docs & Dev Dashboard: http://localhost:${PORT}/api-docs`);
+  console.log(`[GatePass Server] WebSocket listening on ws://localhost:${PORT}/ws`);
+
+  // Initialize MongoDB Atlas Cloud Database connection
+  DB.initSchema()
+    .then(() => {
+      console.log(`[GatePass Server] Connected to ${DB.getDatabaseInfo().type} successfully!`);
+    })
+    .catch((error) => {
+      console.error('[GatePass Server] MongoDB initialization error:', error.message);
     });
-  })
-  .catch((error) => {
-    console.error('[GatePass Server] MongoDB startup failed:', error);
-    process.exitCode = 1;
-  });
+});

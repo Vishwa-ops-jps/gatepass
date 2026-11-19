@@ -1,6 +1,16 @@
 const fs = require('fs');
 const path = require('path');
-const { MongoClient } = require('mongodb');
+
+let MongoClient;
+try {
+  MongoClient = require('mongodb').MongoClient;
+} catch (e1) {
+  try {
+    MongoClient = require(path.join(__dirname, 'node_modules', 'mongodb')).MongoClient;
+  } catch (e2) {
+    MongoClient = require(path.join(__dirname, '..', 'node_modules', 'mongodb')).MongoClient;
+  }
+}
 
 // Auto-load .env file if available
 const serverEnv = path.join(__dirname, '.env');
